@@ -1,0 +1,108 @@
+apiVersion: skaffold/v4beta6
+kind: Config
+metadata:
+  name: puppy-store
+
+build:
+  local:
+    push: false
+  artifacts:
+    - image: puppy-store-auth
+      context: backend
+      custom:
+        buildCommand: docker build -f packages/auth/Dockerfile -t $IMAGE .
+        dependencies:
+          paths:
+            - packages/auth/**
+            - packages/shared/**
+            - prisma/**
+            - package*.json
+            - tsconfig*.json
+    - image: puppy-store-puppies
+      context: backend
+      custom:
+        buildCommand: docker build -f packages/puppies/Dockerfile -t $IMAGE .
+        dependencies:
+          paths:
+            - packages/puppies/**
+            - packages/shared/**
+            - prisma/**
+            - package*.json
+            - tsconfig*.json
+    - image: puppy-store-expert
+      context: backend
+      custom:
+        buildCommand: docker build -f packages/expert/Dockerfile -t $IMAGE .
+        dependencies:
+          paths:
+            - packages/expert/**
+            - packages/shared/**
+            - prisma/**
+            - package*.json
+            - tsconfig*.json
+    - image: puppy-store-chat
+      context: backend
+      custom:
+        buildCommand: docker build -f packages/chat/Dockerfile -t $IMAGE .
+        dependencies:
+          paths:
+            - packages/chat/**
+            - packages/shared/**
+            - prisma/**
+            - package*.json
+            - tsconfig*.json
+
+deploy:
+  helm:
+    releases:
+      - name: puppy-store
+        chartPath: helm/puppy-store
+        namespace: puppy-store
+        createNamespace: true
+        setValues:
+          auth.image.repository: puppy-store-auth
+          auth.image.tag: latest
+          puppies.image.repository: puppy-store-puppies
+          puppies.image.tag: latest
+          expert.image.repository: puppy-store-expert
+          expert.image.tag: latest
+          chat.image.repository: puppy-store-chat
+          chat.image.tag: latest
+          expert.llm.provider: local
+          expert.llm.local.baseUrl: "http://host.docker.internal:11434/v1"
+          expert.llm.local.model: "qwen2.5-3b-instruct"
+          observability.sentry.enabled: true
+          observability.langsmith.enabled: true
+        setValueTemplates:
+          auth.image.repository: "{{.IMAGE_REPO_puppy_store_auth}}"
+          auth.image.tag: "{{.IMAGE_TAG_puppy_store_auth}}"
+          puppies.image.repository: "{{.IMAGE_REPO_puppy_store_puppies}}"
+          puppies.image.tag: "{{.IMAGE_TAG_puppy_store_puppies}}"
+          expert.image.repository: "{{.IMAGE_REPO_puppy_store_expert}}"
+          expert.image.tag: "{{.IMAGE_TAG_puppy_store_expert}}"
+          chat.image.repository: "{{.IMAGE_REPO_puppy_store_chat}}"
+          chat.image.tag: "{{.IMAGE_TAG_puppy_store_chat}}"
+          observability.sentry.dsn: "{{.SENTRY_DSN}}"
+          observability.langsmith.project: "{{.LANGSMITH_PROJECT}}"
+
+portForward:
+  - resourceType: service
+    resourceName: puppy-store-auth
+    namespace: puppy-store
+    port: 80
+    localPort: 3001
+  - resourceType: service
+    resourceName: puppy-store-puppies
+    namespace: puppy-store
+    port: 80
+    localPort: 3002
+  - resourceType: service
+    resourceName: puppy-store-expert
+    namespace: puppy-store
+    port: 80
+    localPort: 3003
+  - resourceType: service
+    resourceName: puppy-store-chat
+    namespace: puppy-store
+    port: 80
+    localPort: 3004

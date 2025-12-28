@@ -1,0 +1,139 @@
+# Local development values (Docker Desktop Kubernetes)
+# Secrets/config loaded from .env.local via --set flags
+
+# JWT secret for local dev
+jwt:
+  secret: "dev-secret-change-in-production"
+
+database:
+  external: false
+  host: puppy-store-postgresql
+  port: 5432
+  name: puppystore
+  user: postgres
+  existingSecret: puppy-store-postgresql
+  existingSecretKey: postgres-password
+
+# Pod annotations
+podAnnotations: {}
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# ============ AUTH SERVICE ============
+auth:
+  replicaCount: 1
+
+  image:
+    repository: puppy-store-auth
+    tag: latest
+    pullPolicy: Never
+
+  service:
+    type: NodePort
+    port: 80
+    targetPort: 3001
+
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# ============ PUPPIES SERVICE ============
+puppies:
+  replicaCount: 1
+
+  image:
+    repository: puppy-store-puppies
+    tag: latest
+    pullPolicy: Never
+
+  service:
+    type: NodePort
+    port: 80
+    targetPort: 3002
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# ============ CHAT SERVICE ============
+chat:
+  replicaCount: 1
+
+  image:
+    repository: puppy-store-chat
+    tag: latest
+    pullPolicy: Never
+
+  service:
+    type: NodePort
+    port: 80
+    targetPort: 3004
+
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# ============ EXPERT SERVICE ============
+expert:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: puppy-store-expert
+    tag: latest
+    pullPolicy: Never
+
+  service:
+    type: NodePort
+    port: 80
+    targetPort: 3003
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  llm:
+    provider: local
+    local:
+      baseUrl: http://host.docker.internal:11434/v1
+      model: qwen2.5-8b-instruct
+
+# ============ OBSERVABILITY ============
+# For local dev, Sentry/LangSmith can be enabled via secrets
+# Create secret: kubectl create secret generic langsmith-secret --from-literal=api-key=YOUR_KEY -n puppy-store
+observability:
+  sentry:
+    enabled: true
+    dsn: ""  # Set via --set or create from .env
+  langsmith:
+    enabled: true
+    secretName: langsmith-secret
+    secretKey: api-key
+    project: puppy-store-local
+  loki:
+    enabled: false  # Run docker-compose.observability.yml separately
+    host: ""
+  logLevel: debug

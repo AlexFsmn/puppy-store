@@ -1,0 +1,19 @@
+# Copy this file to terraform.tfvars and fill in the values
+# DO NOT commit terraform.tfvars to version control!
+
+project_name = "puppy-store"
+environment  = "prod"
+location     = "eastus"
+
+# AKS Configuration
+aks_node_count   = 2
+aks_node_vm_size = "Standard_D2s_v3"
+
+# PostgreSQL Configuration
+postgres_sku_name       = "B_Standard_B1ms"
+postgres_storage_mb     = 32768
+postgres_admin_username = "puppyadmin"
+
+# Secrets (sensitive - never commit actual values!)
+openai_api_key = "sk-..."
+jwt_secret     = "your-secure-jwt-secret-here"

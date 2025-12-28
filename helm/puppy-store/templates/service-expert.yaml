@@ -1,0 +1,19 @@
+{{- if .Values.expert.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "puppy-store.fullname" . }}-expert
+  labels:
+    {{- include "puppy-store.labels" . | nindent 4 }}
+    app.kubernetes.io/component: expert
+spec:
+  type: {{ .Values.expert.service.type }}
+  ports:
+    - port: {{ .Values.expert.service.port }}
+      targetPort: {{ .Values.expert.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "puppy-store.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: expert
+{{- end }}

@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "puppy-store.fullname" . }}-migrate
+  labels:
+    {{- include "puppy-store.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "puppy-store.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: "{{ .Values.puppies.image.repository }}:{{ .Values.puppies.image.tag }}"
+          imagePullPolicy: {{ .Values.puppies.image.pullPolicy }}
+          command: ["npx", "prisma", "migrate", "deploy"]
+          env:
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret | default (printf "%s-db-secret" (include "puppy-store.fullname" .)) }}
+                  key: {{ .Values.database.existingSecretKey }}
+            - name: DATABASE_URL
+              value: {{ include "puppy-store.databaseUrl" . | quote }}

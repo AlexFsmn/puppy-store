@@ -1,0 +1,131 @@
+{{- if .Values.expert.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "puppy-store.fullname" . }}-expert
+  labels:
+    {{- include "puppy-store.labels" . | nindent 4 }}
+    app.kubernetes.io/component: expert
+spec:
+  replicas: {{ .Values.expert.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "puppy-store.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: expert
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "puppy-store.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: expert
+    spec:
+      containers:
+        - name: expert
+          image: "{{ .Values.expert.image.repository }}:{{ .Values.expert.image.tag }}"
+          imagePullPolicy: {{ .Values.expert.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.expert.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret | default (printf "%s-db-secret" (include "puppy-store.fullname" .)) }}
+                  key: {{ .Values.database.existingSecretKey }}
+            - name: DATABASE_URL
+              value: {{ include "puppy-store.databaseUrl" . | quote }}
+            - name: NODE_ENV
+              value: production
+            - name: AUTH_SERVICE_URL
+              value: "http://{{ include "puppy-store.fullname" . }}-auth:{{ .Values.auth.service.port }}"
+            - name: LLM_PROVIDER
+              value: {{ .Values.expert.llm.provider | quote }}
+            {{- if eq .Values.expert.llm.provider "openai" }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.keyVault.enabled }}
+                  name: {{ include "puppy-store.fullname" . }}-keyvault-secrets
+                  key: openai-api-key
+                  {{- else }}
+                  name: {{ .Values.expert.llm.openai.secretName }}
+                  key: {{ .Values.expert.llm.openai.secretKey }}
+                  {{- end }}
+            - name: OPENAI_MODEL
+              value: {{ .Values.expert.llm.openai.model | quote }}
+            {{- else if eq .Values.expert.llm.provider "local" }}
+            - name: LOCAL_LLM_BASE_URL
+              value: {{ .Values.expert.llm.local.baseUrl | quote }}
+            - name: LOCAL_LLM_MODEL
+              value: {{ .Values.expert.llm.local.model | quote }}
+            {{- end }}
+            # Observability
+            - name: LOG_LEVEL
+              value: {{ .Values.observability.logLevel | quote }}
+            {{- if .Values.observability.sentry.enabled }}
+            - name: SENTRY_DSN
+              value: {{ .Values.observability.sentry.dsn | quote }}
+            {{- end }}
+            {{- if .Values.observability.langsmith.enabled }}
+            - name: LANGCHAIN_TRACING_V2
+              value: "true"
+            - name: LANGCHAIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.observability.langsmith.secretName }}
+                  key: {{ .Values.observability.langsmith.secretKey }}
+            - name: LANGCHAIN_PROJECT
+              value: {{ .Values.observability.langsmith.project | quote }}
+            - name: LANGCHAIN_ENDPOINT
+              value: "https://api.smith.langchain.com"
+            {{- end }}
+            {{- if .Values.observability.loki.enabled }}
+            - name: LOKI_HOST
+              value: {{ .Values.observability.loki.host | quote }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.expert.resources | nindent 12 }}
+          {{- if .Values.keyVault.enabled }}
+          volumeMounts:
+            - name: secrets-store
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+          {{- end }}
+      {{- if .Values.keyVault.enabled }}
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "puppy-store.fullname" . }}-keyvault
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

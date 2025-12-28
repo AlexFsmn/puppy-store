@@ -1,0 +1,134 @@
+# Production values (Azure Kubernetes Service)
+
+# JWT secret (use existing secret in production)
+jwt:
+  secret: ""  # Set via --set or use existingSecret
+  existingSecret: puppy-store-jwt-secret
+  existingSecretKey: secret
+
+# Azure Key Vault integration (recommended)
+# Prerequisites:
+#   1. Enable Secrets Store CSI Driver addon on AKS:
+#      az aks enable-addons --addons azure-keyvault-secrets-provider -g <rg> -n <cluster>
+#   2. Create Key Vault and add secrets: openai-api-key, jwt-secret, db-password
+#   3. Grant the managed identity access to Key Vault secrets
+keyVault:
+  enabled: true
+  name: <KEY_VAULT_NAME>                      # e.g., "puppy-store-kv"
+  tenantId: <AZURE_TENANT_ID>                 # Azure AD tenant ID
+  userAssignedIdentityID: <MANAGED_IDENTITY>  # AKS managed identity client ID
+
+# Azure PostgreSQL Flexible Server
+database:
+  external: true
+  host: <POSTGRES_HOST>.postgres.database.azure.com
+  port: 5432
+  name: puppystore
+  user: <POSTGRES_USER>
+  existingSecret: puppy-store-db-credentials
+  existingSecretKey: password
+
+# ============ AUTH SERVICE ============
+auth:
+  replicaCount: 2
+  image:
+    repository: <ACR_NAME>.azurecr.io/puppy-store-auth
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3001
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# ============ PUPPIES SERVICE ============
+puppies:
+  replicaCount: 2
+  image:
+    repository: <ACR_NAME>.azurecr.io/puppy-store-puppies
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3002
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+# ============ CHAT SERVICE ============
+chat:
+  replicaCount: 2
+  image:
+    repository: <ACR_NAME>.azurecr.io/puppy-store-chat
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3004
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# ============ EXPERT SERVICE ============
+expert:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: <ACR_NAME>.azurecr.io/puppy-store-expert
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3003
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  llm:
+    provider: openai
+    openai:
+      secretName: openai-secret
+      secretKey: api-key
+      model: gpt-4o-mini
+
+# ============ INGRESS ============
+ingress:
+  enabled: true
+  className: nginx
+  host: api.puppystore.example.com  # Replace with your domain
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  tls:
+    enabled: true
+    secretName: puppy-store-tls
+
+# ============ OBSERVABILITY ============
+observability:
+  sentry:
+    enabled: false
+    dsn: ""
+  langsmith:
+    enabled: false
+  loki:
+    enabled: false
+  logLevel: info

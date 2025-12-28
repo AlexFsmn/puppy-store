@@ -1,0 +1,159 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum PuppyStatus {
+  AVAILABLE
+  ADOPTED
+}
+
+enum VaccinationStatus {
+  UNKNOWN
+  PARTIAL
+  COMPLETE
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+// User model for authentication
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  phone        String?
+  location     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Saved preferences from last recommendation session
+  savedPreferences Json?
+  preferencesUpdatedAt DateTime?
+
+  // Relations
+  postedPuppies Puppy[]       @relation("PosterPuppies")
+  applications  Application[]
+  sentMessages  Message[]     @relation("SentMessages")
+}
+
+model Puppy {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Basic info
+  breed       String
+  age         Int      // months
+  gender      String   // male, female
+  weight      Float    // kg
+
+  // Adoption info
+  adoptionFee  Int          // cents
+  status       PuppyStatus  @default(AVAILABLE)
+  requirements String?      // special adoption requirements
+  location     String
+
+  // Health
+  healthRecords     String?           // text description of health history
+  vaccinationStatus VaccinationStatus @default(UNKNOWN)
+
+  // Personality
+  energyLevel  String  // low, medium, high
+  goodWithKids Boolean
+  goodWithPets Boolean
+  temperament  String  // e.g. "friendly, playful, calm"
+
+  // Relations
+  posterId     String
+  poster       User          @relation("PosterPuppies", fields: [posterId], references: [id])
+  photos       PuppyPhoto[]
+  applications Application[]
+}
+
+model PuppyPhoto {
+  id        String   @id @default(cuid())
+  url       String
+  order     Int      @default(0)
+  puppyId   String
+  puppy     Puppy    @relation(fields: [puppyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Application {
+  id        String            @id @default(cuid())
+  status    ApplicationStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  // Applicant
+  applicantId String
+  applicant   User   @relation(fields: [applicantId], references: [id])
+
+  // Puppy being applied for
+  puppyId String
+  puppy   Puppy  @relation(fields: [puppyId], references: [id])
+
+  // Application details
+  contactPhone    String
+  contactEmail    String
+  livingSituation String  // apartment, house, house_with_yard
+  hasYard         Boolean
+  hasFence        Boolean
+  petExperience   String  // first_time, some_experience, experienced
+  otherPets       String? // description of other pets
+  message         String? // personal message to poster
+
+  // Tracking when poster viewed this application
+  posterViewedAt DateTime?
+
+  // Chat
+  chatRoom ChatRoom?
+
+  @@unique([applicantId, puppyId])
+}
+
+model ChatRoom {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  messages      Message[]
+  readReceipts  ChatReadReceipt[]
+  createdAt     DateTime    @default(now())
+}
+
+model ChatReadReceipt {
+  id         String   @id @default(cuid())
+  chatRoomId String
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  userId     String
+  lastReadAt DateTime @default(now())
+
+  @@unique([chatRoomId, userId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  createdAt  DateTime @default(now())
+
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+
+  chatRoomId String
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+}

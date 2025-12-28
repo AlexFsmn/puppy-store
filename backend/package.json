@@ -1,0 +1,35 @@
+{
+  "name": "puppy-store-backend",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:auth": "npm run dev -w @puppy-store/auth",
+    "dev:puppies": "npm run dev -w @puppy-store/puppies",
+    "dev:expert": "npm run dev -w @puppy-store/expert",
+    "dev:chat": "npm run dev -w @puppy-store/chat",
+    "build": "npm run build -w @puppy-store/shared && npm run build -w @puppy-store/auth && npm run build -w @puppy-store/puppies && npm run build -w @puppy-store/expert && npm run build -w @puppy-store/chat",
+    "build:auth": "npm run build -w @puppy-store/shared && npm run build -w @puppy-store/auth",
+    "build:puppies": "npm run build -w @puppy-store/shared && npm run build -w @puppy-store/puppies",
+    "build:expert": "npm run build -w @puppy-store/shared && npm run build -w @puppy-store/expert",
+    "build:chat": "npm run build -w @puppy-store/shared && npm run build -w @puppy-store/chat",
+    "seed": "ts-node prisma/seed.ts",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "dotenv": "^16.4.5"
+  }
+}

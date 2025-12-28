@@ -1,0 +1,69 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "puppy-store.fullname" . }}
+  labels:
+    {{- include "puppy-store.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          # Auth service routes
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "puppy-store.fullname" . }}-auth
+                port:
+                  number: {{ .Values.auth.service.port }}
+          # Puppies and applications routes
+          - path: /puppies
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "puppy-store.fullname" . }}-puppies
+                port:
+                  number: {{ .Values.puppies.service.port }}
+          - path: /applications
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "puppy-store.fullname" . }}-puppies
+                port:
+                  number: {{ .Values.puppies.service.port }}
+          # Expert service routes
+          {{- if .Values.expert.enabled }}
+          - path: /expert
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "puppy-store.fullname" . }}-expert
+                port:
+                  number: {{ .Values.expert.service.port }}
+          {{- end }}
+          # WebSocket chat (requires sticky sessions)
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "puppy-store.fullname" . }}-chat
+                port:
+                  number: {{ .Values.chat.service.port }}
+{{- end }}

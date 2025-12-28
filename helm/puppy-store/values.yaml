@@ -1,0 +1,157 @@
+# Default values for puppy-store
+
+# JWT secret for auth (change in production!)
+jwt:
+  secret: "change-this-in-production"
+
+# Azure Key Vault integration (recommended for production)
+keyVault:
+  enabled: false
+  name: ""                    # Key Vault name (e.g., "puppy-store-kv")
+  tenantId: ""                # Azure AD tenant ID
+  userAssignedIdentityID: ""  # Managed identity client ID
+
+# Database configuration
+database:
+  external: false
+  host: ""
+  port: 5432
+  name: puppystore
+  user: ""
+  existingSecret: ""
+  existingSecretKey: "password"
+
+# Pod annotations
+podAnnotations: {}
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# ============ AUTH SERVICE ============
+auth:
+  replicaCount: 1
+
+  image:
+    repository: puppy-store-auth
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3001
+
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# ============ PUPPIES SERVICE ============
+puppies:
+  replicaCount: 1
+
+  image:
+    repository: puppy-store-puppies
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3002
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# ============ CHAT SERVICE ============
+chat:
+  replicaCount: 1
+
+  image:
+    repository: puppy-store-chat
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3004
+
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# ============ EXPERT SERVICE ============
+expert:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: puppy-store-expert
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3003
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+  llm:
+    provider: openai
+    openai:
+      secretName: openai-secret
+      secretKey: api-key
+      model: gpt-4o-mini
+    local:
+      baseUrl: http://host.docker.internal:11434/v1
+      model: qwen2.5-3b-instruct
+
+# ============ OBSERVABILITY ============
+observability:
+  sentry:
+    enabled: false
+    dsn: ""
+  langsmith:
+    enabled: false
+    secretName: langsmith-secret
+    secretKey: api-key
+    project: puppy-store
+  loki:
+    enabled: false
+    host: ""
+  logLevel: info
+
+# ============ INGRESS ============
+ingress:
+  enabled: false
+  className: nginx
+  host: ""
+  tls:
+    enabled: false
+    secretName: ""

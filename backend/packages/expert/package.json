@@ -1,0 +1,28 @@
+{
+  "name": "@puppy-store/expert",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@puppy-store/shared": "*",
+    "@langchain/core": "^1.0.1",
+    "@langchain/langgraph": "^1.0.7",
+    "@langchain/openai": "^1.0.0",
+    "langchain": "^1.0.0",
+    "langsmith": "^0.2.0",
+    "cors": "^2.8.5",
+    "express": "^5.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "nodemon": "^3.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.4.5"
+  }
+}
