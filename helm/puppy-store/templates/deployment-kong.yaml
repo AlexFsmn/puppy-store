@@ -1,0 +1,91 @@
+{{- if .Values.kong.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "puppy-store.fullname" . }}-kong
+  labels:
+    {{- include "puppy-store.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kong
+spec:
+  replicas: {{ .Values.kong.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "puppy-store.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: kong
+  template:
+    metadata:
+      annotations:
+        # Force restart when config changes
+        checksum/config: {{ include (print $.Template.BasePath "/configmap-kong.yaml") . | sha256sum }}
+      labels:
+        {{- include "puppy-store.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: kong
+    spec:
+      containers:
+        - name: kong
+          image: "{{ .Values.kong.image.repository }}:{{ .Values.kong.image.tag }}"
+          imagePullPolicy: {{ .Values.kong.image.pullPolicy }}
+          ports:
+            - name: proxy
+              containerPort: 8000
+              protocol: TCP
+            {{- if .Values.kong.admin.enabled }}
+            - name: admin
+              containerPort: 8001
+              protocol: TCP
+            {{- end }}
+          env:
+            # DB-less mode with declarative config
+            - name: KONG_DATABASE
+              value: "off"
+            - name: KONG_DECLARATIVE_CONFIG
+              value: "/kong/declarative/kong.yml"
+            # Proxy settings
+            - name: KONG_PROXY_ACCESS_LOG
+              value: "/dev/stdout"
+            - name: KONG_PROXY_ERROR_LOG
+              value: "/dev/stderr"
+            - name: KONG_PROXY_LISTEN
+              value: "0.0.0.0:8000"
+            # Admin API
+            {{- if .Values.kong.admin.enabled }}
+            - name: KONG_ADMIN_LISTEN
+              value: "0.0.0.0:8001"
+            - name: KONG_ADMIN_ACCESS_LOG
+              value: "/dev/stdout"
+            - name: KONG_ADMIN_ERROR_LOG
+              value: "/dev/stderr"
+            {{- else }}
+            - name: KONG_ADMIN_LISTEN
+              value: "off"
+            {{- end }}
+            # Plugins
+            - name: KONG_PLUGINS
+              value: "bundled"
+          volumeMounts:
+            - name: kong-config
+              mountPath: /kong/declarative
+              readOnly: true
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.kong.resources | nindent 12 }}
+      volumes:
+        - name: kong-config
+          configMap:
+            name: {{ include "puppy-store.fullname" . }}-kong-config
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

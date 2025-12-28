@@ -3,6 +3,55 @@
 # JWT secret for auth (change in production!)
 jwt:
   secret: "change-this-in-production"
+  issuer: "puppy-store"  # Must match Kong JWT credential key
+
+# ============ API GATEWAY (KONG) ============
+kong:
+  enabled: true
+
+  replicaCount: 1
+
+  image:
+    repository: kong
+    tag: "3.5"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: NodePort
+    port: 8000
+    nodePort: 30080  # Accessible at localhost:30080 locally
+
+  admin:
+    enabled: true  # Enable for local debugging
+    port: 8001
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# ============ REDIS ============
+redis:
+  enabled: true
+
+  image:
+    repository: redis
+    tag: "7-alpine"
+    pullPolicy: IfNotPresent
+
+  service:
+    port: 6379
+
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
 
 # Azure Key Vault integration (recommended for production)
 keyVault:
@@ -36,6 +85,9 @@ affinity: {}
 # ============ AUTH SERVICE ============
 auth:
   replicaCount: 1
+  # Gateway mode: services trust X-Consumer-Custom-Id header from Kong
+  # Standalone mode: services validate JWT directly (fallback for testing)
+  authMode: gateway
 
   image:
     repository: puppy-store-auth

@@ -56,3 +56,25 @@ Database URL construction
 {{- printf "postgresql://postgres:$(DATABASE_PASSWORD)@%s-postgresql:%v/%s?schema=public" .Release.Name (.Values.database.port | int) .Values.database.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Redis host - returns external host or internal service name
+*/}}
+{{- define "puppy-store.redisHost" -}}
+{{- if and .Values.redis.external .Values.redis.external.enabled }}
+{{- .Values.redis.external.host }}
+{{- else }}
+{{- printf "%s-redis" (include "puppy-store.fullname" .) }}
+{{- end }}
+{{- end }}
+
+{{/*
+Redis port - returns external port or internal service port
+*/}}
+{{- define "puppy-store.redisPort" -}}
+{{- if and .Values.redis.external .Values.redis.external.enabled }}
+{{- .Values.redis.external.port }}
+{{- else }}
+{{- .Values.redis.service.port }}
+{{- end }}
+{{- end }}

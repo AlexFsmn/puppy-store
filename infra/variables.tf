@@ -54,6 +54,25 @@ variable "postgres_admin_username" {
   default     = "puppyadmin"
 }
 
+# Redis Configuration
+variable "redis_capacity" {
+  description = "Redis cache capacity (0-6 for Basic/Standard, 1-4 for Premium)"
+  type        = number
+  default     = 0
+}
+
+variable "redis_family" {
+  description = "Redis cache family (C for Basic/Standard, P for Premium)"
+  type        = string
+  default     = "C"
+}
+
+variable "redis_sku_name" {
+  description = "Redis SKU name (Basic, Standard, Premium)"
+  type        = string
+  default     = "Basic"
+}
+
 # Key Vault Secrets (sensitive - provide via tfvars or env)
 variable "openai_api_key" {
   description = "OpenAI API key"

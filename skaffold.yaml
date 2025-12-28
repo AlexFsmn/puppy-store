@@ -86,6 +86,19 @@ deploy:
           observability.langsmith.project: "{{.LANGSMITH_PROJECT}}"
 
 portForward:
+  # Kong API Gateway - main entry point for all API calls
+  - resourceType: service
+    resourceName: puppy-store-kong
+    namespace: puppy-store
+    port: 8000
+    localPort: 8000
+  # Kong Admin API - for debugging/inspection
+  - resourceType: service
+    resourceName: puppy-store-kong
+    namespace: puppy-store
+    port: 8001
+    localPort: 8001
+  # Direct service access (bypasses Kong - useful for debugging)
   - resourceType: service
     resourceName: puppy-store-auth
     namespace: puppy-store
@@ -106,3 +119,9 @@ portForward:
     namespace: puppy-store
     port: 80
     localPort: 3004
+  # Redis - for debugging
+  - resourceType: service
+    resourceName: puppy-store-redis
+    namespace: puppy-store
+    port: 6379
+    localPort: 6379

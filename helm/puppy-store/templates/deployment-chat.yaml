@@ -44,6 +44,10 @@ spec:
                   key: secret
             - name: NODE_ENV
               value: production
+            - name: AUTH_MODE
+              value: {{ .Values.auth.authMode | quote }}
+            - name: JWT_ISSUER
+              value: {{ .Values.jwt.issuer | quote }}
           livenessProbe:
             httpGet:
               path: /health

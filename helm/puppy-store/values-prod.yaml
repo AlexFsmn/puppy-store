@@ -5,6 +5,44 @@ jwt:
   secret: ""  # Set via --set or use existingSecret
   existingSecret: puppy-store-jwt-secret
   existingSecretKey: secret
+  issuer: "puppy-store"
+
+# ============ API GATEWAY (KONG) ============
+kong:
+  enabled: true
+  replicaCount: 2  # HA in production
+
+  image:
+    repository: kong
+    tag: "3.5"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP  # Exposed via Ingress in production
+    port: 8000
+
+  admin:
+    enabled: false  # Disable admin API in production
+    port: 8001
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# ============ REDIS (Azure Cache for Redis) ============
+redis:
+  # Use Azure Cache for Redis in production (external)
+  enabled: false
+  external:
+    enabled: true
+    host: <REDIS_HOST>.redis.cache.windows.net
+    port: 6380
+    ssl: true
+    # Password stored in Key Vault as 'redis-password'
 
 # Azure Key Vault integration (recommended)
 # Prerequisites:
@@ -30,6 +68,7 @@ database:
 
 # ============ AUTH SERVICE ============
 auth:
+  authMode: gateway  # Trust Kong headers
   replicaCount: 2
   image:
     repository: <ACR_NAME>.azurecr.io/puppy-store-auth

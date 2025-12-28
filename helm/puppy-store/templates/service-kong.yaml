@@ -1,0 +1,28 @@
+{{- if .Values.kong.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "puppy-store.fullname" . }}-kong
+  labels:
+    {{- include "puppy-store.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kong
+spec:
+  type: {{ .Values.kong.service.type }}
+  ports:
+    - port: {{ .Values.kong.service.port }}
+      targetPort: 8000
+      protocol: TCP
+      name: proxy
+      {{- if and (eq .Values.kong.service.type "NodePort") .Values.kong.service.nodePort }}
+      nodePort: {{ .Values.kong.service.nodePort }}
+      {{- end }}
+    {{- if .Values.kong.admin.enabled }}
+    - port: {{ .Values.kong.admin.port }}
+      targetPort: 8001
+      protocol: TCP
+      name: admin
+    {{- end }}
+  selector:
+    {{- include "puppy-store.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: kong
+{{- end }}

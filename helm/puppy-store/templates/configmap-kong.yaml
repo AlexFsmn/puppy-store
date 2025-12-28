@@ -1,0 +1,209 @@
+{{- if .Values.kong.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "puppy-store.fullname" . }}-kong-config
+  labels:
+    {{- include "puppy-store.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kong
+data:
+  kong.yml: |
+    _format_version: "3.0"
+    _transform: true
+
+    # JWT Consumer - represents all authenticated users
+    consumers:
+      - username: puppy-store-users
+        jwt_secrets:
+          - key: {{ .Values.jwt.issuer | quote }}
+            algorithm: HS256
+            secret: {{ .Values.jwt.secret | quote }}
+
+    # Global plugins
+    plugins:
+      # Rate limiting for all routes
+      - name: rate-limiting
+        config:
+          minute: 200
+          policy: redis
+          redis_host: {{ include "puppy-store.redisHost" . }}
+          redis_port: {{ include "puppy-store.redisPort" . }}
+          {{- if and .Values.redis.external .Values.redis.external.enabled .Values.redis.external.ssl }}
+          redis_ssl: true
+          redis_ssl_verify: false
+          {{- end }}
+          hide_client_headers: false
+          fault_tolerant: true
+
+      # Request size limiting
+      - name: request-size-limiting
+        config:
+          allowed_payload_size: 10
+          size_unit: megabytes
+
+      # Prometheus metrics
+      - name: prometheus
+        config:
+          per_consumer: false
+          status_code_metrics: true
+          latency_metrics: true
+
+    # Services and Routes
+    services:
+      # ============ AUTH SERVICE ============
+      # Public routes (no JWT required)
+      - name: auth-public
+        url: http://{{ include "puppy-store.fullname" . }}-auth/
+        routes:
+          - name: auth-login
+            paths:
+              - /api/auth/login
+            methods:
+              - POST
+            strip_path: false
+          - name: auth-register
+            paths:
+              - /api/auth/register
+            methods:
+              - POST
+            strip_path: false
+          - name: auth-refresh
+            paths:
+              - /api/auth/refresh
+            methods:
+              - POST
+            strip_path: false
+
+      # Protected auth routes
+      - name: auth-protected
+        url: http://{{ include "puppy-store.fullname" . }}-auth/
+        routes:
+          - name: auth-me
+            paths:
+              - /api/auth/me
+            methods:
+              - GET
+            strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              header_names:
+                - Authorization
+
+      # ============ PUPPIES SERVICE ============
+      # Public routes (optional auth handled by service)
+      - name: puppies-public
+        url: http://{{ include "puppy-store.fullname" . }}-puppies/
+        routes:
+          - name: puppies-list
+            paths:
+              - /api/puppies
+            methods:
+              - GET
+            strip_path: false
+          - name: puppies-detail
+            paths:
+              - /api/puppies/(?<id>[^/]+)$
+            methods:
+              - GET
+            strip_path: false
+        plugins:
+          # Optional JWT - doesn't reject if missing, but validates if present
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              anonymous: anonymous
+
+      # Protected puppies routes
+      - name: puppies-protected
+        url: http://{{ include "puppy-store.fullname" . }}-puppies/
+        routes:
+          - name: puppies-my
+            paths:
+              - /api/puppies/my
+            methods:
+              - GET
+            strip_path: false
+          - name: puppies-create
+            paths:
+              - /api/puppies
+            methods:
+              - POST
+            strip_path: false
+          - name: puppies-update
+            paths:
+              - /api/puppies/(?<id>[^/]+)$
+            methods:
+              - PATCH
+            strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+
+      # ============ APPLICATIONS ============
+      - name: applications
+        url: http://{{ include "puppy-store.fullname" . }}-puppies/
+        routes:
+          - name: applications-all
+            paths:
+              - /api/applications
+            strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+
+      # ============ EXPERT SERVICE ============
+      - name: expert
+        url: http://{{ include "puppy-store.fullname" . }}-expert/
+        routes:
+          - name: expert-all
+            paths:
+              - /api/expert
+              - /api/recommendations
+              - /api/descriptions
+              - /api/feedback
+            strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+          # Lower rate limit for LLM endpoints (expensive)
+          - name: rate-limiting
+            config:
+              minute: 60
+              policy: redis
+              redis_host: {{ include "puppy-store.redisHost" . }}
+              redis_port: {{ include "puppy-store.redisPort" . }}
+              {{- if and .Values.redis.external .Values.redis.external.enabled .Values.redis.external.ssl }}
+              redis_ssl: true
+              redis_ssl_verify: false
+              {{- end }}
+
+      # ============ CHAT SERVICE (WebSocket) ============
+      - name: chat
+        url: http://{{ include "puppy-store.fullname" . }}-chat/
+        routes:
+          - name: chat-websocket
+            paths:
+              - /ws/chat
+            strip_path: false
+        # Note: WebSocket upgrade is automatic over http/https
+        # Auth is handled by the chat service via query param
+
+    # Anonymous consumer for optional auth routes
+    consumers:
+      - username: anonymous
+{{- end }}

@@ -75,6 +75,22 @@ output "postgres_admin_username" {
   sensitive   = true
 }
 
+# Redis outputs
+output "redis_host" {
+  description = "Redis cache hostname"
+  value       = azurerm_redis_cache.main.hostname
+}
+
+output "redis_port" {
+  description = "Redis cache SSL port"
+  value       = azurerm_redis_cache.main.ssl_port
+}
+
+output "redis_connection_string" {
+  description = "Redis connection string (stored in Key Vault)"
+  value       = "Stored in Key Vault as 'redis-connection-string'"
+}
+
 # Azure tenant ID (for Helm values)
 output "azure_tenant_id" {
   description = "Azure AD tenant ID"
