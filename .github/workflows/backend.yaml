@@ -1,4 +1,4 @@
-name: CI
+name: Backend CI
 
 'on':
   push:
@@ -6,7 +6,7 @@ name: CI
       - '*'
     paths:
       - backend/**
-      - .github/workflows/ci.yaml
+      - .github/workflows/backend.yaml
   pull_request:
     paths:
       - backend/**

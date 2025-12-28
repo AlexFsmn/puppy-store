@@ -35,7 +35,10 @@ export function PrimaryButton({
       ]}
       onPress={onPress}
       disabled={loading || disabled}
-      activeOpacity={0.7}>
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{disabled: loading || disabled}}
+      accessibilityLabel={loading ? 'Loading' : title}>
       {loading ? (
         <ActivityIndicator color={colors.white} />
       ) : (

@@ -1,9 +1,11 @@
 # Puppy Store
 
-[![CI](https://github.com/alexfsmn/puppy-store/actions/workflows/ci.yaml/badge.svg)](https://github.com/alexfsmn/puppy-store/actions/workflows/ci.yaml)
+[![Backend CI](https://github.com/alexfsmn/puppy-store/actions/workflows/backend.yaml/badge.svg)](https://github.com/alexfsmn/puppy-store/actions/workflows/backend.yaml)
 [![Mobile CI](https://github.com/alexfsmn/puppy-store/actions/workflows/mobile.yml/badge.svg)](https://github.com/alexfsmn/puppy-store/actions/workflows/mobile.yml)
 
 An AI-powered puppy adoption platform with a React Native mobile app and microservices backend.
+
+![Overview](images/overview.png)
 
 ## What it does
 
@@ -11,7 +13,9 @@ An AI-powered puppy adoption platform with a React Native mobile app and microse
 - **Expert Q&A**: Ask questions about breeds, care, training, and puppy health
 - **Browse & Apply**: View available puppies and submit adoption applications
 
-## Architecture
+## Agent Architecture Overview
+
+![Agent Architecture](images/agent_architecture.png)
 
 ```
 PuppyStore/          # React Native mobile app (iOS/Android)
