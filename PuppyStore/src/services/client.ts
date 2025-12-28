@@ -37,7 +37,7 @@ function buildHeaders(accessToken?: string | null, hasBody?: boolean): Record<st
     headers['Content-Type'] = 'application/json';
   }
   if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
+    headers.Authorization = `Bearer ${accessToken}`;
   }
   return headers;
 }

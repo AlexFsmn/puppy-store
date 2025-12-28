@@ -14,7 +14,6 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useAuth} from '../../contexts/AuthContext';
 import {fetchMyPuppies, MyPuppy} from '../../services/puppiesApi';
 import {colors, spacing, layout, fontSize, fontWeight} from '../../theme';
-import {LoadingScreen, ErrorScreen, EmptyState, StatusBadge} from '../../components';
 import {getPuppyImageSource} from '../../utils';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {RootStackParamList} from '../../navigation/RootNavigator';

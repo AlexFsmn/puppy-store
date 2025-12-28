@@ -16,7 +16,7 @@ import {useChat, ChatMessage} from '../../hooks';
 import {validation} from '../../constants';
 import {formatTime} from '../../utils';
 import {useNotifications} from '../../contexts/NotificationsContext';
-import {colors, spacing, layout, fontSize, fontWeight, containerStyles, buttonStyles, emptyStateStyles} from '../../theme';
+import {colors, spacing, fontSize, fontWeight, containerStyles, buttonStyles, emptyStateStyles} from '../../theme';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {RootStackParamList} from '../../navigation/RootNavigator';
 

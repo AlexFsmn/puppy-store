@@ -75,7 +75,7 @@ export function AssistantScreen({navigation}: Props) {
           content: response.message,
         },
       ]);
-    } catch (err) {
+    } catch {
       setError('Failed to start session. Please try again.');
     } finally {
       setInitializing(false);
@@ -121,7 +121,7 @@ export function AssistantScreen({navigation}: Props) {
         };
         setMessages(prev => [...prev, assistantMessage]);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to send message. Please try again.');
     } finally {
       setLoading(false);

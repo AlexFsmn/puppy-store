@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useEffect} from 'react';
+import React, {useState, useCallback, useEffect, memo} from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,14 @@ const statusColors = {
   ACCEPTED: {bg: colors.status.accepted.background, text: colors.status.accepted.text},
   REJECTED: {bg: colors.status.rejected.background, text: colors.status.rejected.text},
 };
+
+const ChatHeaderButton = memo(function ChatHeaderButton({onPress}: {onPress: () => void}) {
+  return (
+    <TouchableOpacity style={styles.headerButton} onPress={onPress}>
+      <Icon name="chatbubble-outline" size={22} color={colors.text} />
+    </TouchableOpacity>
+  );
+});
 
 export function ApplicationDetailScreen({
   navigation,
@@ -66,31 +74,29 @@ export function ApplicationDetailScreen({
 
   const isPoster = application?.puppy?.posterId === user?.id;
 
+  const handleChatPress = useCallback(() => {
+    if (application) {
+      navigation.navigate('Chat', {
+        applicationId: application.id,
+        otherUserName: isPoster
+          ? application.applicant?.name || 'Applicant'
+          : 'Poster',
+      });
+    }
+  }, [application, isPoster, navigation]);
+
   // Set up header message button (must be before early returns to follow Rules of Hooks)
   useEffect(() => {
     if (application && application.status === 'PENDING') {
       navigation.setOptions({
-        headerRight: () => (
-          <TouchableOpacity
-            style={{padding: 8, marginRight: 8}}
-            onPress={() =>
-              navigation.navigate('Chat', {
-                applicationId: application.id,
-                otherUserName: isPoster
-                  ? application.applicant?.name || 'Applicant'
-                  : 'Poster',
-              })
-            }>
-            <Icon name="chatbubble-outline" size={22} color={colors.text} />
-          </TouchableOpacity>
-        ),
+        headerRight: () => <ChatHeaderButton onPress={handleChatPress} />,
       });
     } else {
       navigation.setOptions({
         headerRight: undefined,
       });
     }
-  }, [application, isPoster, navigation]);
+  }, [application, handleChatPress, navigation]);
 
   const handleUpdateStatus = async (status: 'ACCEPTED' | 'REJECTED') => {
     const action = status === 'ACCEPTED' ? 'accept' : 'reject';
@@ -434,5 +440,9 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
+  },
+  headerButton: {
+    padding: 8,
+    marginRight: 8,
   },
 });

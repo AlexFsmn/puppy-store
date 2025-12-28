@@ -1,0 +1,53 @@
+name: CI
+
+'on':
+  push:
+    branches:
+      - '*'
+    paths:
+      - backend/**
+      - .github/workflows/ci.yaml
+  pull_request:
+    paths:
+      - backend/**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - auth
+          - puppies
+          - chat
+          - expert
+        include:
+          - service: auth
+            context: ./backend
+            dockerfile: ./backend/packages/auth/Dockerfile
+          - service: puppies
+            context: ./backend
+            dockerfile: ./backend/packages/puppies/Dockerfile
+          - service: chat
+            context: ./backend
+            dockerfile: ./backend/packages/chat/Dockerfile
+          - service: expert
+            context: ./backend
+            dockerfile: ./backend/packages/expert/Dockerfile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          tags: puppy-store-${{ matrix.service }}:test
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}

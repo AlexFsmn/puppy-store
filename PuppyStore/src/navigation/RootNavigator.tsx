@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {memo} from 'react';
 import {TouchableOpacity, View, StyleSheet, ActivityIndicator, Text} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
@@ -21,6 +21,45 @@ import {useAuth} from '../contexts/AuthContext';
 import {useNotifications} from '../contexts/NotificationsContext';
 import {colors} from '../theme/colors';
 import Icon from 'react-native-vector-icons/Ionicons';
+
+// Memoized tab bar icons
+const PawIcon = memo(function PawIcon({color, size}: {color: string; size: number}) {
+  return <Icon name="paw" size={size} color={color} />;
+});
+
+const ChatbubblesIcon = memo(function ChatbubblesIcon({color, size}: {color: string; size: number}) {
+  return <Icon name="chatbubbles" size={size} color={color} />;
+});
+
+const HeartIcon = memo(function HeartIcon({color, size}: {color: string; size: number}) {
+  return <Icon name="heart-outline" size={size} color={color} />;
+});
+
+// Memoized header buttons
+const SettingsHeaderButton = memo(function SettingsHeaderButton({onPress}: {onPress: () => void}) {
+  return (
+    <TouchableOpacity style={styles.headerButton} onPress={onPress}>
+      <Icon name="settings-outline" size={22} color={colors.text} />
+    </TouchableOpacity>
+  );
+});
+
+const ReceivedApplicationsHeaderButton = memo(function ReceivedApplicationsHeaderButton({
+  onPress,
+  badgeCount,
+}: {
+  onPress: () => void;
+  badgeCount: number;
+}) {
+  return (
+    <TouchableOpacity style={styles.headerButton} onPress={onPress}>
+      <View>
+        <Icon name="mail-outline" size={22} color={colors.text} />
+        <Badge count={badgeCount} />
+      </View>
+    </TouchableOpacity>
+  );
+});
 
 function Badge({count}: {count: number}) {
   if (count <= 0) return null;
@@ -74,17 +113,12 @@ function MainTabs() {
         component={PuppyListScreen}
         options={({navigation}) => ({
           title: 'Browse',
-          tabBarIcon: ({color, size}) => (
-            <Icon name="paw" size={size} color={color} />
-          ),
+          tabBarIcon: PawIcon,
           headerTitle: 'Available Puppies',
           headerRight: () => (
-            <TouchableOpacity
-              style={styles.headerButton}
+            <SettingsHeaderButton
               onPress={() => navigation.getParent()?.navigate('Settings')}
-            >
-              <Icon name="settings-outline" size={22} color={colors.text} />
-            </TouchableOpacity>
+            />
           ),
         })}
       />
@@ -93,9 +127,7 @@ function MainTabs() {
         component={AssistantScreen}
         options={{
           title: 'Assistant',
-          tabBarIcon: ({color, size}) => (
-            <Icon name="chatbubbles" size={size} color={color} />
-          ),
+          tabBarIcon: ChatbubblesIcon,
           headerShown: false,
         }}
       />
@@ -104,9 +136,7 @@ function MainTabs() {
         component={MyPostingsScreen}
         options={{
           title: 'My Puppies',
-          tabBarIcon: ({color, size}) => (
-            <Icon name="heart-outline" size={size} color={color} />
-          ),
+          tabBarIcon: HeartIcon,
           headerTitle: 'My Postings',
         }}
       />
@@ -123,15 +153,10 @@ function MainTabs() {
           ),
           headerTitle: 'My Applications',
           headerRight: () => (
-            <TouchableOpacity
-              style={styles.headerButton}
+            <ReceivedApplicationsHeaderButton
               onPress={() => navigation.getParent()?.navigate('ReceivedApplications')}
-            >
-              <View>
-                <Icon name="mail-outline" size={22} color={colors.text} />
-                <Badge count={unreadApplications} />
-              </View>
-            </TouchableOpacity>
+              badgeCount={unreadApplications}
+            />
           ),
         })}
       />

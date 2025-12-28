@@ -1,6 +1,6 @@
 # Puppy Store
 
-[![Build and Deploy](https://github.com/alexfsmn/puppy-store/actions/workflows/deploy.yaml/badge.svg)](https://github.com/alexfsmn/puppy-store/actions/workflows/deploy.yaml)
+[![CI](https://github.com/alexfsmn/puppy-store/actions/workflows/ci.yaml/badge.svg)](https://github.com/alexfsmn/puppy-store/actions/workflows/ci.yaml)
 [![Mobile CI](https://github.com/alexfsmn/puppy-store/actions/workflows/mobile.yml/badge.svg)](https://github.com/alexfsmn/puppy-store/actions/workflows/mobile.yml)
 
 An AI-powered puppy adoption platform with a React Native mobile app and microservices backend.
