@@ -5,6 +5,14 @@
 
 An AI-powered puppy adoption platform with a React Native mobile app and microservices backend.
 
+<table>
+  <tr>
+    <td><img src="images/app_demo_chat.png" width="300" alt="Chat Demo"></td>
+    <td><img src="images/app_demo_listings.png" width="300" alt="Listings Demo"></td>
+    <td><img src="images/app_demo_application.png" width="300" alt="Application Demo"></td>
+  </tr>
+</table>
+
 ![Overview](images/overview.png)
 
 ## What it does
