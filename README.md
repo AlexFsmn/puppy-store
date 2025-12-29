@@ -8,6 +8,7 @@ An AI-powered puppy adoption platform with a React Native mobile app and microse
 <table>
   <tr>
     <td><img src="images/app_demo_chat.png" width="300" alt="Chat Demo"></td>
+    <td><img src="images/app_demo_matches.png" width="300" alt="Matches Demo"></td>
     <td><img src="images/app_demo_listings.png" width="300" alt="Listings Demo"></td>
     <td><img src="images/app_demo_application.png" width="300" alt="Application Demo"></td>
   </tr>
@@ -112,3 +113,7 @@ Pushes to `main` trigger the GitHub Actions workflow which:
 | Database | PostgreSQL |
 | Infra | Terraform, Helm, AKS |
 | Observability | Sentry, LangSmith, Prometheus |
+
+## Documentation
+
+- [Systems Design Thinking](systems_design_thinking.md) - Architectural decisions, trade-offs, and reasoning
