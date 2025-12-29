@@ -1,5 +1,5 @@
-import React, {useEffect} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, ScrollView} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert} from 'react-native';
 import {useSettings} from '../../contexts/SettingsContext';
 import {useAuth} from '../../contexts/AuthContext';
 import {colors, spacing, layout, fontSize, fontWeight, cardStyles, optionStyles, buttonStyles} from '../../theme';
@@ -94,7 +94,8 @@ function formatPreferences(prefs: PuppyPreferences): Array<{icon: string; label:
 
 export function SettingsScreen() {
   const {settings, setWeightUnit} = useSettings();
-  const {user, logout, refreshUser} = useAuth();
+  const {user, logout, refreshUser, clearPreferences} = useAuth();
+  const [isClearing, setIsClearing] = useState(false);
 
   // Refresh user data when screen mounts to get latest preferences
   useEffect(() => {
@@ -103,6 +104,30 @@ export function SettingsScreen() {
 
   const hasPreferences = user?.savedPreferences && Object.values(user.savedPreferences).some(v => v !== null);
   const preferenceItems = user?.savedPreferences ? formatPreferences(user.savedPreferences) : [];
+
+  const handleClearPreferences = () => {
+    Alert.alert(
+      'Clear Preferences',
+      'Are you sure you want to clear your adoption preferences? You will need to answer the questions again in the chat.',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            setIsClearing(true);
+            try {
+              await clearPreferences();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to clear preferences. Please try again.');
+            } finally {
+              setIsClearing(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -128,11 +153,23 @@ export function SettingsScreen() {
           )}
         </View>
         {hasPreferences && preferenceItems.length > 0 ? (
-          <View style={styles.preferencesContainer}>
-            {preferenceItems.map((item, index) => (
-              <PreferenceRow key={index} icon={item.icon} label={item.label} value={item.value} />
-            ))}
-          </View>
+          <>
+            <View style={styles.preferencesContainer}>
+              {preferenceItems.map((item, index) => (
+                <PreferenceRow key={index} icon={item.icon} label={item.label} value={item.value} />
+              ))}
+            </View>
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={handleClearPreferences}
+              disabled={isClearing}
+            >
+              <Icon name="trash-outline" size={16} color={colors.error} />
+              <Text style={styles.clearButtonText}>
+                {isClearing ? 'Clearing...' : 'Clear Preferences'}
+              </Text>
+            </TouchableOpacity>
+          </>
         ) : (
           <View style={styles.noPreferences}>
             <Icon name="chatbubbles-outline" size={24} color={colors.textMuted} />
@@ -243,5 +280,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  clearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  clearButtonText: {
+    fontSize: fontSize.body,
+    color: colors.error,
   },
 });

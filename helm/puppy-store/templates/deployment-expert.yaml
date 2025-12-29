@@ -74,6 +74,8 @@ spec:
               value: {{ .Values.expert.llm.local.baseUrl | quote }}
             - name: LOCAL_LLM_MODEL
               value: {{ .Values.expert.llm.local.model | quote }}
+            - name: LOCAL_EMBEDDING_BASE_URL
+              value: {{ .Values.expert.llm.local.embeddingBaseUrl | quote }}
             {{- end }}
             # Observability
             - name: LOG_LEVEL

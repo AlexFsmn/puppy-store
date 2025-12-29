@@ -21,6 +21,7 @@ import {
   sanitizeInput,
   getRefusalMessage,
 } from '../prompts';
+import {searchCache, storeInCache} from './semanticCache';
 
 /**
  * Agent types
@@ -165,6 +166,14 @@ async function routerNode(state: AgentStateType): Promise<Partial<AgentStateType
     ? lastMessage.content
     : '';
 
+  // Check semantic cache for routing decision
+  const cached = await searchCache(userMessage, 'router');
+  if (cached) {
+    const agent = cached.response as AgentType;
+    loggers.adoption.debug({agent, cacheHit: true, similarity: cached.similarity}, 'Router cache hit');
+    return {currentAgent: agent};
+  }
+
   const tool = new RouteToAgentTool();
   const llm = createLLM({temperature: 0});
   const llmWithTools = llm.bindTools([tool], {tool_choice: 'routeToAgent'});
@@ -189,6 +198,12 @@ async function routerNode(state: AgentStateType): Promise<Partial<AgentStateType
       const result = tool.getResult();
       if (result) {
         loggers.adoption.debug({agent: result.agent, confidence: result.confidence}, 'Router decision');
+
+        // Cache high-confidence routing decisions
+        if (result.confidence === 'high') {
+          storeInCache(userMessage, result.agent, 'router').catch(() => {});
+        }
+
         return {currentAgent: result.agent};
       }
     }
@@ -438,7 +453,9 @@ async function adoptionNode(state: AgentStateType): Promise<Partial<AgentStateTy
   const breedStrictTool = new SetBreedStrictnessTool(state.preferences, state.userId);
 
   const llm = createLLM({temperature: 0.7});
-  const llmWithTools = llm.bindTools([prefsTool, breedCheckTool, breedStrictTool]);
+  const llmWithTools = llm.bindTools([prefsTool, breedCheckTool, breedStrictTool], {
+    tool_choice: 'required',
+  });
 
   const missingFields = getMissingFields(state.preferences);
   const systemPrompt = ADOPTION_PROMPT
@@ -455,6 +472,12 @@ async function adoptionNode(state: AgentStateType): Promise<Partial<AgentStateTy
 
   try {
     const response = await llmWithTools.invoke(llmMessages);
+
+    loggers.adoption.info({
+      hasToolCalls: !!(response.tool_calls && response.tool_calls.length > 0),
+      toolCalls: response.tool_calls?.map(t => t.name),
+      content: typeof response.content === 'string' ? response.content.slice(0, 100) : null,
+    }, 'Adoption LLM response');
 
     let updatedPrefs = state.preferences;
     const toolResults: string[] = [];
@@ -778,6 +801,13 @@ async function callExpertAgent(
     return getRefusalMessage();
   }
 
+  // Check semantic cache first
+  const cached = await searchCache(cleanMessage, 'expert');
+  if (cached) {
+    loggers.llm.debug({similarity: cached.similarity}, 'Expert cache hit');
+    return cached.response;
+  }
+
   const llm = createLLM({temperature: 0.7});
 
   const llmMessages: BaseMessage[] = [new SystemMessage(EXPERT_PROMPT)];
@@ -789,9 +819,14 @@ async function callExpertAgent(
 
   try {
     const response = await llm.invoke(llmMessages);
-    return typeof response.content === 'string'
+    const responseText = typeof response.content === 'string'
       ? response.content
       : 'I apologize, but I encountered an issue. Could you please rephrase your question?';
+
+    // Store in cache for future use (don't await - fire and forget)
+    storeInCache(cleanMessage, responseText, 'expert').catch(() => {});
+
+    return responseText;
   } catch (error) {
     loggers.llm.error({err: error}, 'Expert agent error');
     return 'I apologize, but I encountered an issue. Could you please rephrase your question?';

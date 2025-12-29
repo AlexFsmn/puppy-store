@@ -53,28 +53,17 @@ echo ""
 echo "Creating namespace..."
 kubectl create namespace puppy-store --dry-run=client -o yaml | kubectl apply -f -
 
-echo "Deploying PostgreSQL..."
-helm repo add bitnami https://charts.bitnami.com/bitnami 2>/dev/null || true
-helm repo update
-
-helm upgrade --install puppy-store-postgresql bitnami/postgresql \
-    --namespace puppy-store \
-    --set auth.postgresPassword="$DATABASE_PASSWORD" \
-    --set auth.database="$DATABASE_NAME" \
-    --set primary.persistence.size=1Gi \
-    --wait
-
-echo "Waiting for PostgreSQL to be ready..."
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql -n puppy-store --timeout=120s
-
-echo "Deploying Puppy Store services..."
+echo "Deploying Puppy Store services (includes PostgreSQL with pgvector)..."
 helm upgrade --install puppy-store "$ROOT_DIR/helm/puppy-store" \
     --namespace puppy-store \
     -f "$ROOT_DIR/helm/puppy-store/values-local.yaml" \
     --set database.name="$DATABASE_NAME" \
     --set database.password="$DATABASE_PASSWORD" \
     --set database.port="$DATABASE_PORT" \
-    --wait
+    --wait --timeout 5m
+
+echo "Waiting for PostgreSQL to be ready..."
+kubectl wait --for=condition=ready pod/puppy-store-postgresql-0 -n puppy-store --timeout=120s
 
 echo ""
 echo "=== Deployment Complete ==="

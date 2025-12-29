@@ -17,6 +17,14 @@ An AI-powered puppy adoption platform with a React Native mobile app and microse
 
 ![Agent Architecture](images/agent_architecture.png)
 
+### Agent Specification
+
+![Agent Specification](images/agent_specification.png)
+
+### Session & Cache Architecture
+
+![Redis Architecture](images/redis.png)
+
 ```
 PuppyStore/          # React Native mobile app (iOS/Android)
 backend/

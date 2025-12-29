@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import {Prisma} from '@prisma/client';
 import {
   prisma,
   z,
@@ -172,4 +173,18 @@ export async function getCurrentUser(token: string) {
 export function validateToken(token: string) {
   const payload = verifyToken(token);
   return {valid: true, userId: payload.userId, email: payload.email};
+}
+
+export async function clearUserPreferences(token: string) {
+  const payload = verifyToken(token);
+
+  await prisma.user.update({
+    where: {id: payload.userId},
+    data: {
+      savedPreferences: Prisma.JsonNull,
+      preferencesUpdatedAt: null,
+    },
+  });
+
+  return {success: true};
 }

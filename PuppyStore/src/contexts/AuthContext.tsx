@@ -29,6 +29,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
   refreshUser: () => Promise<void>;
+  clearPreferences: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -279,6 +280,22 @@ export function AuthProvider({children}: AuthProviderProps) {
     }
   }, [tokens.accessToken]);
 
+  const clearPreferences = useCallback(async () => {
+    if (!tokens.accessToken) {
+      return;
+    }
+
+    try {
+      await authApi.clearPreferences(tokens.accessToken);
+      // Refresh user to get updated state (null preferences)
+      const userData = await authApi.getMe(tokens.accessToken);
+      setUser(userData);
+    } catch (error) {
+      console.error('Failed to clear preferences:', error);
+      throw error;
+    }
+  }, [tokens.accessToken]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -290,6 +307,7 @@ export function AuthProvider({children}: AuthProviderProps) {
         logout,
         getAccessToken,
         refreshUser,
+        clearPreferences,
       }}>
       {children}
     </AuthContext.Provider>

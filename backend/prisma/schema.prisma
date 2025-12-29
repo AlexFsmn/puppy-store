@@ -157,3 +157,21 @@ model Message {
   chatRoomId String
   chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
 }
+
+// Semantic cache for LLM responses - uses pgvector for similarity search
+// The 'embedding' vector column is added via raw SQL migration when pgvector is available
+// This model works as a fallback exact-match cache when pgvector is not installed
+model SemanticCache {
+  id         String   @id @default(cuid())
+  agentType  String   // 'router', 'adoption', 'expert'
+  inputHash  String   @unique // SHA256 of normalized input - unique for upsert
+  inputText  String   // Original user message
+  response   String   // Cached response
+  metadata   Json?    // Optional context (preferences, etc.)
+  hitCount   Int      @default(0)
+  lastUsedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([agentType])
+  @@index([hitCount, lastUsedAt])
+}

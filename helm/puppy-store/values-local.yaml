@@ -120,6 +120,7 @@ expert:
     local:
       baseUrl: http://host.docker.internal:11434/v1
       model: qwen2.5-8b-instruct
+      embeddingBaseUrl: http://host.docker.internal:8081/v1
 
 # ============ OBSERVABILITY ============
 # For local dev, Sentry/LangSmith can be enabled via secrets

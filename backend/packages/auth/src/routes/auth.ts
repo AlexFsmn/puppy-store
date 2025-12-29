@@ -69,4 +69,22 @@ router.post('/validate', validate(validateSchema), (req, res) => {
   }
 });
 
+// DELETE /preferences - Clear user's saved adoption preferences
+router.delete('/preferences', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader?.startsWith('Bearer ')) {
+      res.status(401).json({error: 'No token provided'});
+      return;
+    }
+
+    const token = authHeader.substring(7);
+    const result = await authService.clearUserPreferences(token);
+    res.json(result);
+  } catch (error) {
+    handleAuthError(error, res, 'Failed to clear preferences');
+  }
+});
+
 export default router;

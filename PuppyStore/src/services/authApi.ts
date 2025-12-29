@@ -22,3 +22,7 @@ export function refreshTokens(refreshToken: string) {
 export function getMe(accessToken: string) {
   return client.get<AuthUser>('/me', {accessToken});
 }
+
+export function clearPreferences(accessToken: string) {
+  return client.delete<{success: boolean}>('/preferences', {accessToken});
+}

@@ -5,8 +5,8 @@ metadata:
   labels:
     {{- include "puppy-store.labels" . | nindent 4 }}
   annotations:
-    "helm.sh/hook": pre-install,pre-upgrade
-    "helm.sh/hook-weight": "-1"
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   template:
@@ -15,6 +15,10 @@ spec:
         {{- include "puppy-store.selectorLabels" . | nindent 8 }}
     spec:
       restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z {{ include "puppy-store.fullname" . }}-postgresql 5432; do echo "Waiting for postgres..."; sleep 2; done']
       containers:
         - name: migrate
           image: "{{ .Values.puppies.image.repository }}:{{ .Values.puppies.image.tag }}"
