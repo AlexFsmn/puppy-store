@@ -113,7 +113,7 @@ function MainTabs() {
         component={PuppyListScreen}
         options={({navigation}) => ({
           title: 'Browse',
-          tabBarIcon: PawIcon,
+          tabBarIcon: ({color, size}) => <PawIcon color={color} size={size} />,
           headerTitle: 'Available Puppies',
           headerRight: () => (
             <SettingsHeaderButton
@@ -127,7 +127,7 @@ function MainTabs() {
         component={AssistantScreen}
         options={{
           title: 'Assistant',
-          tabBarIcon: ChatbubblesIcon,
+          tabBarIcon: ({color, size}) => <ChatbubblesIcon color={color} size={size} />,
           headerShown: false,
         }}
       />
@@ -136,7 +136,7 @@ function MainTabs() {
         component={MyPostingsScreen}
         options={{
           title: 'My Puppies',
-          tabBarIcon: HeartIcon,
+          tabBarIcon: ({color, size}) => <HeartIcon color={color} size={size} />,
           headerTitle: 'My Postings',
         }}
       />

@@ -12,6 +12,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../../navigation/RootNavigator';
 import {Puppy} from '../../types';
 import {fetchPuppy} from '../../services/puppiesApi';
+import {getGeneratedDescription, GeneratedDescription} from '../../services/expertApi';
 import {useSettings, WeightUnit} from '../../contexts/SettingsContext';
 import {useAuth} from '../../contexts/AuthContext';
 import {colors, spacing, layout, fontSize, fontWeight} from '../../theme';
@@ -99,6 +100,8 @@ export function PuppyDetailScreen({route, navigation}: Props) {
   const [puppy, setPuppy] = useState<Puppy | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [aiDescription, setAiDescription] = useState<GeneratedDescription | null>(null);
+  const [aiDescriptionLoading, setAiDescriptionLoading] = useState(false);
 
   const loadPuppy = useCallback(async () => {
     setLoading(true);
@@ -116,6 +119,17 @@ export function PuppyDetailScreen({route, navigation}: Props) {
   useEffect(() => {
     loadPuppy();
   }, [loadPuppy]);
+
+  // Load AI description after puppy loads
+  useEffect(() => {
+    if (puppy?.id) {
+      setAiDescriptionLoading(true);
+      getGeneratedDescription(puppy.id)
+        .then(setAiDescription)
+        .catch(() => setAiDescription(null))
+        .finally(() => setAiDescriptionLoading(false));
+    }
+  }, [puppy?.id]);
 
   const handleApply = () => {
     if (puppy) {
@@ -200,6 +214,28 @@ export function PuppyDetailScreen({route, navigation}: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
           <Text style={styles.description}>{puppy.description}</Text>
+        </View>
+
+        {/* AI-Generated Description */}
+        <View style={styles.section}>
+          <View style={styles.aiTitleRow}>
+            <Text style={styles.aiSectionTitle}>AI Summary</Text>
+            <Icon name="sparkles" size={14} color={colors.primary} />
+          </View>
+          {aiDescriptionLoading ? (
+            <View style={styles.aiLoadingContainer}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.aiLoadingText}>Generating personalized summary...</Text>
+            </View>
+          ) : aiDescription ? (
+            <View style={styles.aiDescriptionCard}>
+              <Text style={styles.aiDescriptionText}>{aiDescription.description}</Text>
+            </View>
+          ) : (
+            <View style={styles.aiDescriptionCard}>
+              <Text style={styles.aiDescriptionPlaceholder}>AI summary unavailable</Text>
+            </View>
+          )}
         </View>
 
         {/* Details */}
@@ -407,6 +443,51 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textSecondary,
     lineHeight: 23,
+  },
+
+  // AI Description
+  aiTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  aiSectionTitle: {
+    fontSize: fontSize.caption,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  aiLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primaryLight,
+    borderRadius: layout.cardRadius,
+    padding: spacing.md,
+  },
+  aiLoadingText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontStyle: 'italic',
+  },
+  aiDescriptionCard: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: layout.cardRadius,
+    padding: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  aiDescriptionText: {
+    fontSize: fontSize.body,
+    color: colors.text,
+    lineHeight: 22,
+  },
+  aiDescriptionPlaceholder: {
+    fontSize: fontSize.body,
+    color: colors.textMuted,
+    fontStyle: 'italic',
   },
 
   // Details card
