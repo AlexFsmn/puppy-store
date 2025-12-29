@@ -118,7 +118,7 @@ export function SettingsScreen() {
             setIsClearing(true);
             try {
               await clearPreferences();
-            } catch (error) {
+            } catch (_error) {
               Alert.alert('Error', 'Failed to clear preferences. Please try again.');
             } finally {
               setIsClearing(false);
