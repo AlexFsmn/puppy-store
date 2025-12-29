@@ -7,7 +7,7 @@ import {
   type RecommendationSession,
   type UserWithPreferences,
 } from '../services/recommendationService';
-import {captureException, prisma, loggers} from '@puppy-store/shared';
+import {captureException, prisma, loggers, RedisSessionStore, redisTTL} from '@puppy-store/shared';
 
 const router = Router();
 
@@ -55,11 +55,11 @@ async function getUserFromToken(authHeader: string | undefined): Promise<UserWit
   }
 }
 
-// In-memory session store (in production, use Redis or similar)
-const sessions = new Map<string, RecommendationSession>();
+// Redis session store for recommendation sessions
+const sessions = new RedisSessionStore<RecommendationSession>('session:recommend', redisTTL.recommendSession);
 
 function generateSessionId(): string {
-  return `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  return `rec_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
 /**
@@ -130,7 +130,7 @@ router.post('/session', async (req, res) => {
 
     const {session, initialMessage} = startRecommendationSession(user);
 
-    sessions.set(sessionId, session);
+    await sessions.set(sessionId, session);
 
     // Generate welcome message - different for returning vs new users
     const welcomeMessage = initialMessage ||
@@ -163,7 +163,7 @@ router.post('/session/:sessionId/message', async (req, res) => {
       return;
     }
 
-    const session = sessions.get(sessionId);
+    const session = await sessions.get(sessionId);
     if (!session) {
       res.status(404).json({error: 'Session not found. Please start a new session.'});
       return;
@@ -172,11 +172,11 @@ router.post('/session/:sessionId/message', async (req, res) => {
     const result = await processRecommendationMessage(session, message);
 
     // Update session in store
-    sessions.set(sessionId, result.session);
+    await sessions.set(sessionId, result.session);
 
     if (result.isComplete) {
       // Clean up session after completion
-      sessions.delete(sessionId);
+      await sessions.delete(sessionId);
 
       res.json({
         isComplete: true,
@@ -199,9 +199,9 @@ router.post('/session/:sessionId/message', async (req, res) => {
  * GET /recommendations/session/:sessionId
  * Get current session state
  */
-router.get('/session/:sessionId', (req, res) => {
+router.get('/session/:sessionId', async (req, res) => {
   const {sessionId} = req.params;
-  const session = sessions.get(sessionId);
+  const session = await sessions.get(sessionId);
 
   if (!session) {
     res.status(404).json({error: 'Session not found'});

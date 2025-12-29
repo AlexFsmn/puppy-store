@@ -2,12 +2,21 @@ import {WebSocket} from 'ws';
 import {AuthenticatedWebSocket, ChatMessage} from './types';
 import * as chatService from './services/chat';
 import {ChatError} from './services/chat';
+import {
+  publishToRoom,
+  subscribeToRoom,
+  unsubscribeFromRoom,
+  registerLocalBroadcast,
+} from './pubsub';
 
-// Track connections and room subscriptions
+// Track connections and room subscriptions (local to this pod)
 export const userConnections = new Map<string, Set<AuthenticatedWebSocket>>();
 export const roomSubscriptions = new Map<string, Set<string>>();
 
-export function broadcast(roomId: string, message: ChatMessage, excludeUserId?: string): void {
+/**
+ * Broadcast to local connections only (called by Pub/Sub handler)
+ */
+export function broadcastLocal(roomId: string, message: ChatMessage, excludeUserId?: string): void {
   const roomUsers = roomSubscriptions.get(roomId);
   if (!roomUsers) return;
 
@@ -24,12 +33,26 @@ export function broadcast(roomId: string, message: ChatMessage, excludeUserId?: 
   });
 }
 
+/**
+ * Publish message to Redis for cross-pod broadcasting
+ */
+async function broadcast(roomId: string, message: ChatMessage, excludeUserId?: string): Promise<void> {
+  // Publish to Redis - all pods (including this one) will receive via subscription
+  await publishToRoom(roomId, message, excludeUserId);
+}
+
+// Register local broadcast callback for Pub/Sub handler
+registerLocalBroadcast(broadcastLocal);
+
 export async function handleJoin(ws: AuthenticatedWebSocket, roomId: string): Promise<void> {
   try {
     const chatRoom = await chatService.getOrCreateChatRoom(roomId, ws.userId);
 
-    if (!roomSubscriptions.has(chatRoom.id)) {
+    // Subscribe to Redis channel if this is the first local user in this room
+    const isFirstLocalUser = !roomSubscriptions.has(chatRoom.id);
+    if (isFirstLocalUser) {
       roomSubscriptions.set(chatRoom.id, new Set());
+      await subscribeToRoom(chatRoom.id);
     }
     roomSubscriptions.get(chatRoom.id)!.add(ws.userId);
 
@@ -73,25 +96,27 @@ export async function handleMessage(
   }
 }
 
-export function handleTyping(ws: AuthenticatedWebSocket, roomId: string): void {
-  broadcast(roomId, {
+export async function handleTyping(ws: AuthenticatedWebSocket, roomId: string): Promise<void> {
+  await broadcast(roomId, {
     type: 'typing',
     roomId,
     message: {userId: ws.userId},
   }, ws.userId);
 }
 
-export function handleLeave(ws: AuthenticatedWebSocket, roomId: string): void {
+export async function handleLeave(ws: AuthenticatedWebSocket, roomId: string): Promise<void> {
   const roomUsers = roomSubscriptions.get(roomId);
   if (roomUsers) {
     roomUsers.delete(ws.userId);
     if (roomUsers.size === 0) {
       roomSubscriptions.delete(roomId);
+      // Unsubscribe from Redis channel when no local users remain
+      await unsubscribeFromRoom(roomId);
     }
   }
 }
 
-export function handleDisconnect(ws: AuthenticatedWebSocket): void {
+export async function handleDisconnect(ws: AuthenticatedWebSocket): Promise<void> {
   const connections = userConnections.get(ws.userId);
   if (connections) {
     connections.delete(ws);
@@ -100,10 +125,17 @@ export function handleDisconnect(ws: AuthenticatedWebSocket): void {
     }
   }
 
+  // Collect rooms to unsubscribe from
+  const roomsToUnsubscribe: string[] = [];
+
   roomSubscriptions.forEach((users, roomId) => {
     users.delete(ws.userId);
     if (users.size === 0) {
       roomSubscriptions.delete(roomId);
+      roomsToUnsubscribe.push(roomId);
     }
   });
+
+  // Unsubscribe from Redis channels for empty rooms
+  await Promise.all(roomsToUnsubscribe.map(roomId => unsubscribeFromRoom(roomId)));
 }

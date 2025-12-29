@@ -68,7 +68,7 @@ router.post('/session', async (req, res) => {
     const {session, welcomeMessage} = startChatSession(user);
 
     // Save session
-    saveSession(session);
+    await saveSession(session);
 
     res.json({
       sessionId: session.id,
@@ -99,7 +99,7 @@ router.post('/session/:sessionId/message', async (req, res) => {
       return;
     }
 
-    const session = getSession(sessionId);
+    const session = await getSession(sessionId);
     if (!session) {
       res.status(404).json({error: 'Session not found'});
       return;
@@ -108,7 +108,7 @@ router.post('/session/:sessionId/message', async (req, res) => {
     const {session: updatedSession, response} = await processChatMessage(session, message);
 
     // Save updated session
-    saveSession(updatedSession);
+    await saveSession(updatedSession);
 
     res.json({
       message: response.message,
@@ -133,7 +133,7 @@ router.post('/session/:sessionId/message', async (req, res) => {
 router.get('/session/:sessionId', async (req, res) => {
   try {
     const {sessionId} = req.params;
-    const session = getSession(sessionId);
+    const session = await getSession(sessionId);
 
     if (!session) {
       res.status(404).json({error: 'Session not found'});

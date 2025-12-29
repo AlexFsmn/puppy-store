@@ -78,3 +78,18 @@ Redis port - returns external port or internal service port
 {{- .Values.redis.service.port }}
 {{- end }}
 {{- end }}
+
+{{/*
+Redis URL for application use
+*/}}
+{{- define "puppy-store.redisUrl" -}}
+{{- if and .Values.redis.external .Values.redis.external.enabled }}
+{{- if .Values.redis.external.ssl }}
+{{- printf "rediss://%s:%v" .Values.redis.external.host (.Values.redis.external.port | int) }}
+{{- else }}
+{{- printf "redis://%s:%v" .Values.redis.external.host (.Values.redis.external.port | int) }}
+{{- end }}
+{{- else }}
+{{- printf "redis://%s-redis:%v" (include "puppy-store.fullname" .) (.Values.redis.service.port | int) }}
+{{- end }}
+{{- end }}

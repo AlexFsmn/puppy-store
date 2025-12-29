@@ -53,6 +53,12 @@ redis:
       cpu: 50m
       memory: 64Mi
 
+  # TTL configuration (in seconds)
+  ttl:
+    chatSession: 3600        # 1 hour - chat sessions
+    recommendSession: 3600   # 1 hour - recommendation sessions
+    descriptionCache: 86400  # 24 hours - AI-generated descriptions
+
 # Azure Key Vault integration (recommended for production)
 keyVault:
   enabled: false

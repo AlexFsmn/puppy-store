@@ -1,12 +1,11 @@
 import {StringOutputParser} from '@langchain/core/output_parsers';
 import {createLLM} from '../llm';
 import {descriptionGeneratorPrompt} from '../prompts';
-import {prisma} from '@puppy-store/shared';
+import {prisma, RedisCacheStore, redisTTL} from '@puppy-store/shared';
 import type {GeneratedDescription, Puppy} from '@puppy-store/shared';
 
-// In-memory cache for generated descriptions
-// In production, this should be Redis or stored in the database
-const descriptionCache = new Map<string, GeneratedDescription>();
+// Redis cache for generated descriptions
+const descriptionCache = new RedisCacheStore<GeneratedDescription>('cache:description', redisTTL.descriptionCache);
 
 /**
  * Generate a description for a puppy
@@ -14,7 +13,7 @@ const descriptionCache = new Map<string, GeneratedDescription>();
  */
 export async function generateDescription(puppyId: string): Promise<GeneratedDescription | null> {
   // Check cache first
-  const cached = descriptionCache.get(puppyId);
+  const cached = await descriptionCache.get(puppyId);
   if (cached) {
     return cached;
   }
@@ -38,7 +37,7 @@ export async function generateDescription(puppyId: string): Promise<GeneratedDes
   };
 
   // Cache the result
-  descriptionCache.set(puppyId, result);
+  await descriptionCache.set(puppyId, result);
 
   return result;
 }
@@ -69,15 +68,15 @@ async function generateDescriptionForPuppy(puppy: Puppy): Promise<string> {
  * Invalidate cache for a specific puppy
  * Call this when puppy data is updated
  */
-export function invalidateDescriptionCache(puppyId: string): void {
-  descriptionCache.delete(puppyId);
+export async function invalidateDescriptionCache(puppyId: string): Promise<void> {
+  await descriptionCache.delete(puppyId);
 }
 
 /**
  * Clear entire description cache
  */
-export function clearDescriptionCache(): void {
-  descriptionCache.clear();
+export async function clearDescriptionCache(): Promise<void> {
+  await descriptionCache.clear();
 }
 
 /**
@@ -92,7 +91,8 @@ export async function generateAllDescriptions(): Promise<number> {
   let generated = 0;
 
   for (const puppy of puppies) {
-    if (!descriptionCache.has(puppy.id)) {
+    const exists = await descriptionCache.has(puppy.id);
+    if (!exists) {
       await generateDescription(puppy.id);
       generated++;
       // Small delay to avoid rate limiting

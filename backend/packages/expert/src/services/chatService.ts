@@ -1,5 +1,5 @@
 import type {RecommendationResponse} from '@puppy-store/shared';
-import {loggers} from '@puppy-store/shared';
+import {loggers, RedisSessionStore, redisTTL} from '@puppy-store/shared';
 import {processMessage, type AgentType} from './agentGraph';
 import {
   createInitialPreferences,
@@ -145,19 +145,19 @@ function generateSessionId(): string {
 }
 
 /**
- * Get session by ID from store
+ * Redis session store for chat sessions
  */
-const sessions = new Map<string, ChatSession>();
+const sessions = new RedisSessionStore<ChatSession>('session:chat', redisTTL.chatSession);
 
-export function getSession(sessionId: string): ChatSession | undefined {
+export async function getSession(sessionId: string): Promise<ChatSession | null> {
   return sessions.get(sessionId);
 }
 
-export function saveSession(session: ChatSession): void {
-  sessions.set(session.id, session);
+export async function saveSession(session: ChatSession): Promise<void> {
+  await sessions.set(session.id, session);
 }
 
-export function deleteSession(sessionId: string): void {
-  sessions.delete(sessionId);
+export async function deleteSession(sessionId: string): Promise<void> {
+  await sessions.delete(sessionId);
   cleanupFeedbackSession(sessionId);
 }

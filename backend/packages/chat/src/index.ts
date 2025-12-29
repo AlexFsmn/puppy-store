@@ -1,6 +1,6 @@
 import {WebSocketServer, WebSocket} from 'ws';
 import http from 'http';
-import {logger} from '@puppy-store/shared';
+import {logger, closeRedis} from '@puppy-store/shared';
 import {verifyToken} from './auth';
 import {AuthenticatedWebSocket, ChatMessage} from './types';
 import {
@@ -11,6 +11,7 @@ import {
   handleLeave,
   handleDisconnect,
 } from './handlers';
+import {initPubSubHandler, closePubSub} from './pubsub';
 
 const PORT = parseInt(process.env.PORT || '3004');
 
@@ -69,7 +70,7 @@ wss.on('connection', (ws: WebSocket, req) => {
           if (msg.roomId) await handleJoin(authWs, msg.roomId);
           break;
         case 'leave':
-          if (msg.roomId) handleLeave(authWs, msg.roomId);
+          if (msg.roomId) await handleLeave(authWs, msg.roomId);
           break;
         case 'message':
           if (msg.roomId && msg.content) {
@@ -77,7 +78,7 @@ wss.on('connection', (ws: WebSocket, req) => {
           }
           break;
         case 'typing':
-          if (msg.roomId) handleTyping(authWs, msg.roomId);
+          if (msg.roomId) await handleTyping(authWs, msg.roomId);
           break;
       }
     } catch (error) {
@@ -107,6 +108,19 @@ const pingInterval = setInterval(() => {
 
 wss.on('close', () => {
   clearInterval(pingInterval);
+});
+
+// Initialize Redis Pub/Sub for cross-pod messaging
+initPubSubHandler();
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('Shutting down chat service...');
+  clearInterval(pingInterval);
+  wss.close();
+  await closePubSub();
+  await closeRedis();
+  process.exit(0);
 });
 
 server.listen(PORT, () => {

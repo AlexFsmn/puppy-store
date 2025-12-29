@@ -46,6 +46,14 @@ spec:
               value: {{ .Values.jwt.issuer | quote }}
             - name: AUTH_SERVICE_URL
               value: "http://{{ include "puppy-store.fullname" . }}-auth:{{ .Values.auth.service.port }}"
+            - name: REDIS_URL
+              value: {{ include "puppy-store.redisUrl" . | quote }}
+            - name: REDIS_TTL_CHAT_SESSION
+              value: {{ .Values.redis.ttl.chatSession | quote }}
+            - name: REDIS_TTL_RECOMMEND_SESSION
+              value: {{ .Values.redis.ttl.recommendSession | quote }}
+            - name: REDIS_TTL_DESCRIPTION_CACHE
+              value: {{ .Values.redis.ttl.descriptionCache | quote }}
             - name: LLM_PROVIDER
               value: {{ .Values.expert.llm.provider | quote }}
             {{- if eq .Values.expert.llm.provider "openai" }}

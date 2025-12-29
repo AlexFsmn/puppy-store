@@ -48,6 +48,8 @@ spec:
               value: {{ .Values.auth.authMode | quote }}
             - name: JWT_ISSUER
               value: {{ .Values.jwt.issuer | quote }}
+            - name: REDIS_URL
+              value: {{ include "puppy-store.redisUrl" . | quote }}
           livenessProbe:
             httpGet:
               path: /health
