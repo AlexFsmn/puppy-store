@@ -42,19 +42,6 @@ export interface PuppyPreferences {
   location?: string;
 }
 
-export interface ExpertQuestion {
-  question: string;
-  context?: {
-    puppyId?: string;
-    breed?: string;
-  };
-}
-
-export interface ExpertResponse {
-  answer: string;
-  sources?: string[];
-}
-
 export interface RecommendationResponse {
   recommendations: Array<{
     puppy: PuppySummary;

@@ -13,3 +13,6 @@ export {StatusBadge} from './display/StatusBadge';
 export {FormInput} from './forms/FormInput';
 export {FormSection} from './forms/FormSection';
 export {SwitchRow} from './forms/SwitchRow';
+
+// Error Handling
+export {ErrorBoundary} from './ErrorBoundary';

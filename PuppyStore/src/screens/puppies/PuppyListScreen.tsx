@@ -1,15 +1,14 @@
-import React from 'react';
+import React, {memo, useCallback} from 'react';
 import {
   View,
   Text,
   FlatList,
   StyleSheet,
-  ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
   Image,
+  ActivityIndicator,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {usePuppies} from '../../hooks/usePuppies';
 import {PuppySummary} from '../../types';
@@ -18,20 +17,23 @@ import type {RootStackParamList} from '../../navigation/RootNavigator';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {LoadingScreen, ErrorScreen, EmptyState} from '../../components';
 import {getPuppyImageSource} from '../../utils';
+import {ui} from '../../constants';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-function PuppyCard({puppy}: {puppy: PuppySummary}) {
-  const navigation = useNavigation<NavigationProp>();
+interface PuppyCardProps {
+  puppy: PuppySummary;
+  onPress: (id: string, name: string) => void;
+}
+
+const PuppyCard = memo(function PuppyCard({puppy, onPress}: PuppyCardProps) {
   const imageSource = getPuppyImageSource(puppy.id, puppy.photos?.[0]?.url);
 
   return (
     <TouchableOpacity
       style={[cardStyles.elevated, styles.card]}
       activeOpacity={0.7}
-      onPress={() =>
-        navigation.navigate('PuppyDetail', {id: puppy.id, name: puppy.name})
-      }>
+      onPress={() => onPress(puppy.id, puppy.name)}>
       <Image source={imageSource} style={[thumbnailSizes.xl, styles.puppyImage]} />
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
@@ -52,27 +54,22 @@ function PuppyCard({puppy}: {puppy: PuppySummary}) {
       </View>
     </TouchableOpacity>
   );
-}
+});
 
+export function PuppyListScreen({navigation}: {navigation: NavigationProp}) {
+  const {data, isLoading, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage} = usePuppies();
+  const puppies = data?.pages.flatMap(page => page.data) ?? [];
 
-function ListFooter({loading}: {loading: boolean}) {
-  if (!loading) return null;
-  return (
-    <View style={styles.footer}>
-      <ActivityIndicator size="small" color={colors.primary} />
-    </View>
-  );
-}
+  const handlePuppyPress = useCallback((id: string, name: string) => {
+    navigation.navigate('PuppyDetail', {id, name});
+  }, [navigation]);
 
-export function PuppyListScreen() {
-  const {puppies, loading, loadingMore, error, refresh, loadMore} = usePuppies();
-
-  if (loading && puppies.length === 0) {
+  if (isLoading && puppies.length === 0) {
     return <LoadingScreen />;
   }
 
   if (error && puppies.length === 0) {
-    return <ErrorScreen message={error} onRetry={refresh} />;
+    return <ErrorScreen message={error.message} onRetry={refetch} />;
   }
 
   if (puppies.length === 0) {
@@ -83,7 +80,7 @@ export function PuppyListScreen() {
           title="No puppies available"
           subtitle="Check back soon for new listings"
           actionLabel="Refresh"
-          onAction={refresh}
+          onAction={refetch}
         />
       </View>
     );
@@ -95,17 +92,27 @@ export function PuppyListScreen() {
       contentContainerStyle={styles.listContent}
       data={puppies}
       keyExtractor={item => item.id}
-      renderItem={({item}) => <PuppyCard puppy={item} />}
+      renderItem={({item}) => <PuppyCard puppy={item} onPress={handlePuppyPress} />}
       refreshControl={
         <RefreshControl
-          refreshing={loading}
-          onRefresh={refresh}
+          refreshing={isLoading}
+          onRefresh={refetch}
           tintColor={colors.primary}
         />
       }
-      onEndReached={loadMore}
-      onEndReachedThreshold={0.5}
-      ListFooterComponent={<ListFooter loading={loadingMore} />}
+      onEndReached={() => {
+        if (hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      }}
+      onEndReachedThreshold={ui.list.endReachedThreshold}
+      ListFooterComponent={
+        isFetchingNextPage ? (
+          <View style={styles.footer}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : null
+      }
       showsVerticalScrollIndicator={false}
     />
   );

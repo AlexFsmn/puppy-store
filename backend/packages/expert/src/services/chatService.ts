@@ -1,6 +1,6 @@
 import type {RecommendationResponse} from '@puppy-store/shared';
 import {loggers, RedisSessionStore, redisTTL} from '@puppy-store/shared';
-import {processMessage, type AgentType} from './agentGraph';
+import {processMessage, type AgentType} from './agents';
 import {
   createInitialPreferences,
   hasSavedPreferences,
@@ -8,7 +8,7 @@ import {
   hasAllRequiredPreferences,
   type ExtractedPreferences,
   type UserWithPreferences,
-} from './adoptionAgent';
+} from './preferences';
 import {
   registerSessionRun,
   registerSessionRecommendations,

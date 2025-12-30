@@ -18,7 +18,7 @@ import {
 } from '../screens';
 import {AuthStack} from './AuthStack';
 import {useAuth} from '../contexts/AuthContext';
-import {useNotifications} from '../contexts/NotificationsContext';
+import {useNotificationCounts} from '../hooks/useNotifications';
 import {colors} from '../theme/colors';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -96,7 +96,9 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
 function MainTabs() {
-  const {unreadApplications, unreadMessages} = useNotifications();
+  const {data} = useNotificationCounts();
+  const unreadApplications = data?.unreadApplications ?? 0;
+  const unreadMessages = data?.unreadMessages ?? 0;
 
   return (
     <Tab.Navigator

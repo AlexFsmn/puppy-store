@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useRef} from 'react';
+import React, {useEffect} from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,15 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import {useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {useAuth} from '../../contexts/AuthContext';
-import {useNotifications} from '../../contexts/NotificationsContext';
-import {fetchReceivedApplications, Application} from '../../services/applicationsApi';
+import {useReceivedApplications} from '../../hooks/useApplications';
+import {useMarkApplicationsRead} from '../../hooks/useNotifications';
+import type {Application} from '../../services/applicationsApi';
 import {colors, spacing, layout, fontSize, fontWeight} from '../../theme';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {RootStackParamList} from '../../navigation/RootNavigator';
 import {LoadingScreen, ErrorScreen, EmptyState, StatusBadge} from '../../components';
+import {ui} from '../../constants';
 
 type ReceivedApplicationsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ReceivedApplications'>;
@@ -25,67 +25,16 @@ type ReceivedApplicationsScreenProps = {
 export function ReceivedApplicationsScreen({
   navigation,
 }: ReceivedApplicationsScreenProps) {
-  const {getAccessToken} = useAuth();
-  const {markApplicationsRead} = useNotifications();
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const cursorRef = useRef<string | null>(null);
+  const {data, isLoading, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage} = useReceivedApplications();
+  const applications = data?.pages.flatMap(page => page.data) ?? [];
+  const {mutate: markRead} = useMarkApplicationsRead();
 
-  const loadApplications = useCallback(async () => {
-    try {
-      setError(null);
-      cursorRef.current = null;
-      const token = await getAccessToken();
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-      const response = await fetchReceivedApplications(token);
-      setApplications(response.data);
-      cursorRef.current = response.nextCursor;
-      setHasMore(response.hasMore);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load applications');
+  // Mark applications as read when screen loads
+  useEffect(() => {
+    if (!isLoading && applications.length > 0) {
+      markRead();
     }
-  }, [getAccessToken]);
-
-  const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore || !cursorRef.current) return;
-
-    setIsLoadingMore(true);
-    try {
-      const token = await getAccessToken();
-      if (!token) return;
-
-      const response = await fetchReceivedApplications(token, cursorRef.current);
-      setApplications(prev => [...prev, ...response.data]);
-      cursorRef.current = response.nextCursor;
-      setHasMore(response.hasMore);
-    } catch (err) {
-      console.error('Error loading more applications:', err);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [getAccessToken, hasMore, isLoadingMore]);
-
-  useFocusEffect(
-    useCallback(() => {
-      setIsLoading(true);
-      loadApplications().finally(() => {
-        setIsLoading(false);
-        markApplicationsRead();
-      });
-    }, [loadApplications, markApplicationsRead]),
-  );
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await loadApplications();
-    setIsRefreshing(false);
-  };
+  }, [isLoading, applications.length, markRead]);
 
   const renderItem = ({item}: {item: Application}) => (
     <TouchableOpacity
@@ -113,12 +62,12 @@ export function ReceivedApplicationsScreen({
     </TouchableOpacity>
   );
 
-  if (isLoading) {
+  if (isLoading && applications.length === 0) {
     return <LoadingScreen />;
   }
 
-  if (error) {
-    return <ErrorScreen message={error} onRetry={loadApplications} />;
+  if (error && applications.length === 0) {
+    return <ErrorScreen message={error.message} onRetry={refetch} />;
   }
 
   return (
@@ -129,17 +78,19 @@ export function ReceivedApplicationsScreen({
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+          <RefreshControl refreshing={isLoading} onRefresh={() => refetch()} />
         }
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={ui.list.endReachedThreshold}
         ListFooterComponent={
-          isLoadingMore ? (
-            <ActivityIndicator
-              size="small"
-              color={colors.primary}
-              style={styles.loadingMore}
-            />
+          isFetchingNextPage ? (
+            <View style={styles.loadingMore}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
           ) : null
         }
         ListEmptyComponent={

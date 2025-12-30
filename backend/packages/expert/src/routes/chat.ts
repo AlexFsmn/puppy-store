@@ -6,7 +6,7 @@ import {
   saveSession,
   type ChatSession,
 } from '../services/chatService';
-import {type ExtractedPreferences, type UserWithPreferences} from '../services/adoptionAgent';
+import {type ExtractedPreferences, type UserWithPreferences} from '../services/preferences';
 import {captureException, prisma, loggers} from '@puppy-store/shared';
 
 const router = Router();

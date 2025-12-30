@@ -1,72 +1,66 @@
-import {useState, useCallback, useEffect, useRef} from 'react';
-import {PuppySummary} from '../types';
-import {fetchPuppies} from '../services/puppiesApi';
+import {useQuery, useInfiniteQuery, useMutation, useQueryClient} from '@tanstack/react-query';
+import * as puppiesApi from '../services/puppiesApi';
+import type {CreatePuppyRequest, PuppyStatus} from '../services/puppiesApi';
 
-interface UsePuppiesResult {
-  puppies: PuppySummary[];
-  loading: boolean;
-  loadingMore: boolean;
-  error: string | null;
-  hasMore: boolean;
-  refresh: () => void;
-  loadMore: () => void;
+// Query keys
+export const puppyKeys = {
+  all: ['puppies'] as const,
+  lists: () => [...puppyKeys.all, 'list'] as const,
+  list: (type: 'public' | 'my') => [...puppyKeys.lists(), type] as const,
+  details: () => [...puppyKeys.all, 'detail'] as const,
+  detail: (id: string) => [...puppyKeys.details(), id] as const,
+};
+
+// Query hooks
+export function usePuppies(limit = 10) {
+  return useInfiniteQuery({
+    queryKey: puppyKeys.list('public'),
+    queryFn: ({pageParam}) => puppiesApi.fetchPuppies(pageParam, limit),
+    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.nextCursor : undefined,
+    initialPageParam: undefined as string | undefined,
+  });
 }
 
-export function usePuppies(): UsePuppiesResult {
-  const [puppies, setPuppies] = useState<PuppySummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const cursorRef = useRef<string | null>(null);
+export function useMyPuppies(limit = 10) {
+  return useInfiniteQuery({
+    queryKey: puppyKeys.list('my'),
+    queryFn: ({pageParam}) => puppiesApi.fetchMyPuppies(pageParam, limit),
+    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.nextCursor : undefined,
+    initialPageParam: undefined as string | undefined,
+  });
+}
 
-  const loadPuppies = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    cursorRef.current = null;
+export function usePuppy(id: string) {
+  return useQuery({
+    queryKey: puppyKeys.detail(id),
+    queryFn: () => puppiesApi.fetchPuppy(id),
+    enabled: !!id,
+  });
+}
 
-    try {
-      const response = await fetchPuppies();
-      setPuppies(response.data);
-      cursorRef.current = response.nextCursor;
-      setHasMore(response.hasMore);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+// Mutation hooks
+export function useCreatePuppy() {
+  const queryClient = useQueryClient();
 
-  const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore || !cursorRef.current) {
-      return;
-    }
+  return useMutation({
+    mutationFn: (data: CreatePuppyRequest) => puppiesApi.createPuppy(data),
+    onSuccess: () => {
+      // Invalidate my puppies list
+      queryClient.invalidateQueries({queryKey: puppyKeys.list('my')});
+    },
+  });
+}
 
-    setLoadingMore(true);
+export function useUpdatePuppy() {
+  const queryClient = useQueryClient();
 
-    try {
-      const response = await fetchPuppies(cursorRef.current);
-      setPuppies(prev => [...prev, ...response.data]);
-      cursorRef.current = response.nextCursor;
-      setHasMore(response.hasMore);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [loadingMore, hasMore]);
-
-  useEffect(() => {
-    loadPuppies();
-  }, [loadPuppies]);
-
-  return {
-    puppies,
-    loading,
-    loadingMore,
-    error,
-    hasMore,
-    refresh: loadPuppies,
-    loadMore,
-  };
+  return useMutation({
+    mutationFn: ({id, data}: {id: string; data: Partial<CreatePuppyRequest> & {status?: PuppyStatus}}) =>
+      puppiesApi.updatePuppy(id, data),
+    onSuccess: (_, variables) => {
+      // Invalidate specific puppy and lists
+      queryClient.invalidateQueries({queryKey: puppyKeys.detail(variables.id)});
+      queryClient.invalidateQueries({queryKey: puppyKeys.lists()});
+    },
+  });
 }

@@ -1,11 +1,15 @@
 import {AuthUser, AuthTokens} from '../types/models/Auth';
 import {AuthResponse, LoginRequest, RegisterRequest} from '../types/api/auth';
 import {config} from '../config';
-import {createApiClient} from './client';
+import {createApiClient, type ApiClient} from './client';
 
 export type {AuthUser, AuthTokens, AuthResponse, LoginRequest, RegisterRequest};
 
-const client = createApiClient(config.api.auth);
+let client: ApiClient = createApiClient(config.api.auth);
+
+export function initializeAuthClient(tokenProvider: () => Promise<string | null>) {
+  client = createApiClient(config.api.auth, {tokenProvider});
+}
 
 export function login(credentials: LoginRequest) {
   return client.post<AuthResponse>('/login', credentials);
@@ -19,10 +23,10 @@ export function refreshTokens(refreshToken: string) {
   return client.post<AuthTokens>('/refresh', {refreshToken});
 }
 
-export function getMe(accessToken: string) {
-  return client.get<AuthUser>('/me', {accessToken});
+export function getMe() {
+  return client.get<AuthUser>('/me');
 }
 
-export function clearPreferences(accessToken: string) {
-  return client.delete<{success: boolean}>('/preferences', {accessToken});
+export function clearPreferences() {
+  return client.delete<{success: boolean}>('/preferences');
 }

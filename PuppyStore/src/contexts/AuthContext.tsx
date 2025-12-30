@@ -180,9 +180,9 @@ export function AuthProvider({children}: AuthProviderProps) {
         const storedTokens = await getStoredTokens();
         if (storedTokens.accessToken) {
           setTokens(storedTokens);
-          // Try to get user info
+          // Try to get user info (client will auto-inject token)
           try {
-            const userData = await authApi.getMe(storedTokens.accessToken);
+            const userData = await authApi.getMe();
             setUser(userData);
           } catch {
             // Access token might be expired, try refresh
@@ -196,7 +196,7 @@ export function AuthProvider({children}: AuthProviderProps) {
                   accessToken: newTokens.accessToken,
                   refreshToken: newTokens.refreshToken,
                 });
-                const userData = await authApi.getMe(newTokens.accessToken);
+                const userData = await authApi.getMe();
                 setUser(userData);
               } catch {
                 // Refresh failed, clear everything
@@ -273,7 +273,7 @@ export function AuthProvider({children}: AuthProviderProps) {
     }
 
     try {
-      const userData = await authApi.getMe(tokens.accessToken);
+      const userData = await authApi.getMe();
       setUser(userData);
     } catch (error) {
       console.error('Failed to refresh user:', error);
@@ -286,9 +286,9 @@ export function AuthProvider({children}: AuthProviderProps) {
     }
 
     try {
-      await authApi.clearPreferences(tokens.accessToken);
+      await authApi.clearPreferences();
       // Refresh user to get updated state (null preferences)
-      const userData = await authApi.getMe(tokens.accessToken);
+      const userData = await authApi.getMe();
       setUser(userData);
     } catch (error) {
       console.error('Failed to clear preferences:', error);

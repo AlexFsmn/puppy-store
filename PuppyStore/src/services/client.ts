@@ -7,6 +7,10 @@ interface RequestOptions {
   params?: Record<string, string | number | undefined>;
 }
 
+export interface ClientOptions {
+  tokenProvider?: () => Promise<string | null>;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -51,18 +55,39 @@ async function parseErrorResponse(response: Response): Promise<string> {
   }
 }
 
-export function createApiClient(baseUrl: string) {
-  async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export function createApiClient(baseUrl: string, clientOptions?: ClientOptions) {
+  const {tokenProvider} = clientOptions || {};
+
+  async function request<T>(path: string, options: RequestOptions = {}, isRetry = false): Promise<T> {
     const {method = 'GET', body, accessToken, params} = options;
 
+    // Auto-inject token if provider exists and no explicit token provided
+    const finalToken = accessToken !== undefined
+      ? accessToken
+      : (tokenProvider ? await tokenProvider() : null);
+
     const url = buildUrl(baseUrl, path, params);
-    const headers = buildHeaders(accessToken, body !== undefined);
+    const headers = buildHeaders(finalToken, body !== undefined);
 
     const response = await fetch(url, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
+
+    // Handle 401 Unauthorized - token might be expired
+    if (response.status === 401 && !isRetry && tokenProvider) {
+      // Token is likely expired, force refresh and retry once
+      try {
+        const newToken = await tokenProvider();
+        if (newToken && newToken !== finalToken) {
+          // We got a new token (likely refreshed), retry the request
+          return request<T>(path, {...options, accessToken: newToken}, true);
+        }
+      } catch {
+        // Token refresh failed, throw the original error
+      }
+    }
 
     if (!response.ok) {
       const message = await parseErrorResponse(response);

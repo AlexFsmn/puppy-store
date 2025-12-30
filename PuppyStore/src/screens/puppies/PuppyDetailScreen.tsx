@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../../navigation/RootNavigator';
-import {Puppy} from '../../types';
-import {fetchPuppy} from '../../services/puppiesApi';
+import {usePuppy} from '../../hooks/usePuppies';
 import {getGeneratedDescription, GeneratedDescription} from '../../services/expertApi';
 import {useSettings, WeightUnit} from '../../contexts/SettingsContext';
 import {useAuth} from '../../contexts/AuthContext';
@@ -97,28 +96,9 @@ export function PuppyDetailScreen({route, navigation}: Props) {
   const {id} = route.params;
   const {settings} = useSettings();
   const {user} = useAuth();
-  const [puppy, setPuppy] = useState<Puppy | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {data: puppy, isLoading: loading, error, refetch} = usePuppy(id);
   const [aiDescription, setAiDescription] = useState<GeneratedDescription | null>(null);
   const [aiDescriptionLoading, setAiDescriptionLoading] = useState(false);
-
-  const loadPuppy = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchPuppy(id);
-      setPuppy(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    loadPuppy();
-  }, [loadPuppy]);
 
   // Load AI description after puppy loads
   useEffect(() => {
@@ -152,8 +132,8 @@ export function PuppyDetailScreen({route, navigation}: Props) {
           <Icon name="paw" size={28} color={colors.error} />
         </View>
         <Text style={styles.errorTitle}>Something went wrong</Text>
-        <Text style={styles.errorText}>{error || 'Puppy not found'}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadPuppy} activeOpacity={0.8}>
+        <Text style={styles.errorText}>{error?.message || 'Puppy not found'}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()} activeOpacity={0.8}>
           <Text style={styles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
       </View>

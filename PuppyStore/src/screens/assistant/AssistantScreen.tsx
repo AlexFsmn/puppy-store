@@ -43,7 +43,7 @@ interface ChatMessage {
 
 export function AssistantScreen({navigation}: Props) {
   const insets = useSafeAreaInsets();
-  const {getAccessToken, refreshUser} = useAuth();
+  const {refreshUser} = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -61,9 +61,7 @@ export function AssistantScreen({navigation}: Props) {
       setError(null);
       setFeedbackGiven(null);
 
-      // Get auth token to load saved preferences
-      const token = await getAccessToken();
-      const response = await startChatSession(token);
+      const response = await startChatSession();
 
       setSessionId(response.sessionId);
       // Store globally for ApplyScreen to use
@@ -80,7 +78,7 @@ export function AssistantScreen({navigation}: Props) {
     } finally {
       setInitializing(false);
     }
-  }, [getAccessToken]);
+  }, []);
 
   useEffect(() => {
     initSession();

@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useEffect, memo} from 'react';
+import React, {useCallback, useEffect, memo} from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,10 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import {useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RouteProp} from '@react-navigation/native';
 import {useAuth} from '../../contexts/AuthContext';
-import {
-  fetchApplication,
-  updateApplicationStatus,
-  Application,
-} from '../../services/applicationsApi';
+import {useApplication, useUpdateApplicationStatus} from '../../hooks/useApplications';
 import {colors, spacing, layout, fontSize, fontWeight} from '../../theme';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {RootStackParamList} from '../../navigation/RootNavigator';
@@ -45,32 +40,9 @@ export function ApplicationDetailScreen({
   route,
 }: ApplicationDetailScreenProps) {
   const {id} = route.params;
-  const {getAccessToken, user} = useAuth();
-  const [application, setApplication] = useState<Application | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadApplication = useCallback(async () => {
-    try {
-      setError(null);
-      const token = await getAccessToken();
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-      const data = await fetchApplication(id, token);
-      setApplication(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load application');
-    }
-  }, [getAccessToken, id]);
-
-  useFocusEffect(
-    useCallback(() => {
-      setIsLoading(true);
-      loadApplication().finally(() => setIsLoading(false));
-    }, [loadApplication]),
-  );
+  const {user} = useAuth();
+  const {data: application, isLoading, error, refetch} = useApplication(id);
+  const {mutate: updateStatus, isPending: isUpdating} = useUpdateApplicationStatus();
 
   const isPoster = application?.puppy?.posterId === user?.id;
 
@@ -98,7 +70,7 @@ export function ApplicationDetailScreen({
     }
   }, [application, handleChatPress, navigation]);
 
-  const handleUpdateStatus = async (status: 'ACCEPTED' | 'REJECTED') => {
+  const handleUpdateStatus = (status: 'ACCEPTED' | 'REJECTED') => {
     const action = status === 'ACCEPTED' ? 'accept' : 'reject';
     const confirmMessage =
       status === 'ACCEPTED'
@@ -110,23 +82,21 @@ export function ApplicationDetailScreen({
       {
         text: action.charAt(0).toUpperCase() + action.slice(1),
         style: status === 'REJECTED' ? 'destructive' : 'default',
-        onPress: async () => {
-          setIsUpdating(true);
-          try {
-            const token = await getAccessToken();
-            if (!token) {
-              throw new Error('Not authenticated');
-            }
-            await updateApplicationStatus(id, status, token);
-            navigation.goBack();
-          } catch (err) {
-            Alert.alert(
-              'Error',
-              err instanceof Error ? err.message : 'Failed to update status',
-            );
-          } finally {
-            setIsUpdating(false);
-          }
+        onPress: () => {
+          updateStatus(
+            {id, status},
+            {
+              onSuccess: () => {
+                navigation.goBack();
+              },
+              onError: (err) => {
+                Alert.alert(
+                  'Error',
+                  err instanceof Error ? err.message : 'Failed to update status',
+                );
+              },
+            },
+          );
         },
       },
     ]);
@@ -143,8 +113,8 @@ export function ApplicationDetailScreen({
   if (error || !application) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>{error || 'Application not found'}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadApplication}>
+        <Text style={styles.errorText}>{error?.message || 'Application not found'}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
       </View>

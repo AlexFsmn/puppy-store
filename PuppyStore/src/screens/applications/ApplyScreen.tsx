@@ -10,7 +10,7 @@ import {
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RouteProp} from '@react-navigation/native';
 import {useAuth} from '../../contexts/AuthContext';
-import {submitApplication} from '../../services/applicationsApi';
+import {useSubmitApplication} from '../../hooks/useApplications';
 import {trackApplicationSubmission} from '../../services/chatApi';
 import {getRecommendationSessionId} from '../assistant/AssistantScreen';
 import {colors, spacing, layout, fontSize, fontWeight} from '../../theme';
@@ -29,8 +29,8 @@ type ApplyScreenProps = {
 
 export function ApplyScreen({navigation, route}: ApplyScreenProps) {
   const {puppyId, puppyName} = route.params;
-  const {getAccessToken, user} = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const {user} = useAuth();
+  const {mutate: submitApp, isPending} = useSubmitApplication();
   const [error, setError] = useState<string | null>(null);
 
   // Form state
@@ -43,7 +43,7 @@ export function ApplyScreen({navigation, route}: ApplyScreenProps) {
   const [otherPets, setOtherPets] = useState('');
   const [message, setMessage] = useState('');
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (
       !contactPhone.trim() ||
       !contactEmail.trim() ||
@@ -54,44 +54,36 @@ export function ApplyScreen({navigation, route}: ApplyScreenProps) {
       return;
     }
 
-    setIsLoading(true);
     setError(null);
 
-    try {
-      const token = await getAccessToken();
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      const application = await submitApplication(
-        {
-          puppyId,
-          contactPhone: contactPhone.trim(),
-          contactEmail: contactEmail.trim().toLowerCase(),
-          livingSituation: livingSituation.trim(),
-          hasYard,
-          hasFence,
-          petExperience: petExperience.trim(),
-          otherPets: otherPets.trim() || undefined,
-          message: message.trim() || undefined,
+    submitApp(
+      {
+        puppyId,
+        contactPhone: contactPhone.trim(),
+        contactEmail: contactEmail.trim().toLowerCase(),
+        livingSituation: livingSituation.trim(),
+        hasYard,
+        hasFence,
+        petExperience: petExperience.trim(),
+        otherPets: otherPets.trim() || undefined,
+        message: message.trim() || undefined,
+      },
+      {
+        onSuccess: (application) => {
+          // Track application submission for LangSmith feedback (if came from recommendations)
+          const sessionId = getRecommendationSessionId();
+          if (sessionId) {
+            trackApplicationSubmission(sessionId, puppyId, puppyName, application.id);
+          }
+          navigation.goBack();
         },
-        token,
-      );
-
-      // Track application submission for LangSmith feedback (if came from recommendations)
-      const sessionId = getRecommendationSessionId();
-      if (sessionId) {
-        trackApplicationSubmission(sessionId, puppyId, puppyName, application.id);
-      }
-
-      navigation.goBack();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to submit application',
-      );
-    } finally {
-      setIsLoading(false);
-    }
+        onError: (err) => {
+          setError(
+            err instanceof Error ? err.message : 'Failed to submit application',
+          );
+        },
+      },
+    );
   };
 
   return (
@@ -123,7 +115,7 @@ export function ApplyScreen({navigation, route}: ApplyScreenProps) {
             onChangeText={setContactPhone}
             keyboardType="phone-pad"
             autoComplete="tel"
-            editable={!isLoading}
+            editable={!isPending}
           />
           <FormInput
             label="Email *"
@@ -133,7 +125,7 @@ export function ApplyScreen({navigation, route}: ApplyScreenProps) {
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
-            editable={!isLoading}
+            editable={!isPending}
           />
         </FormSection>
 
@@ -145,7 +137,7 @@ export function ApplyScreen({navigation, route}: ApplyScreenProps) {
             onChangeText={setLivingSituation}
             multiline
             numberOfLines={3}
-            editable={!isLoading}
+            editable={!isPending}
           />
           <SwitchRow
             label="Do you have a yard?"
@@ -168,14 +160,14 @@ export function ApplyScreen({navigation, route}: ApplyScreenProps) {
             onChangeText={setPetExperience}
             multiline
             numberOfLines={3}
-            editable={!isLoading}
+            editable={!isPending}
           />
           <FormInput
             label="Other pets in the home"
             placeholder="List any current pets (optional)"
             value={otherPets}
             onChangeText={setOtherPets}
-            editable={!isLoading}
+            editable={!isPending}
           />
         </FormSection>
 
@@ -186,14 +178,14 @@ export function ApplyScreen({navigation, route}: ApplyScreenProps) {
             onChangeText={setMessage}
             multiline
             numberOfLines={4}
-            editable={!isLoading}
+            editable={!isPending}
           />
         </FormSection>
 
         <PrimaryButton
           title="Submit Application"
           onPress={handleSubmit}
-          loading={isLoading}
+          loading={isPending}
         />
       </ScrollView>
     </KeyboardAvoidingView>

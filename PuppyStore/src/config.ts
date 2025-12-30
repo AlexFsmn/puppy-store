@@ -24,11 +24,6 @@ export const config = {
     chat: getWsUrl(3004),
   },
 
-  // Polling intervals (in milliseconds)
-  polling: {
-    notifications: 30000,
-  },
-
   // Pagination
   pagination: {
     defaultLimit: 10,

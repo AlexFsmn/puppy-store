@@ -5,8 +5,6 @@ import express from 'express';
 import cors from 'cors';
 import {logger} from '@puppy-store/shared';
 import {getCurrentProvider} from './llm';
-import expertRoutes from './routes/expert';
-import recommendationsRoutes from './routes/recommendations';
 import descriptionsRoutes from './routes/descriptions';
 import chatRoutes from './routes/chat';
 import feedbackRoutes from './routes/feedback';
@@ -27,8 +25,6 @@ app.get('/health', (_req, res) => {
 });
 
 // Routes
-app.use('/expert', expertRoutes);
-app.use('/recommendations', recommendationsRoutes);
 app.use('/descriptions', descriptionsRoutes);
 app.use('/chat', chatRoutes);
 app.use('/feedback', feedbackRoutes);

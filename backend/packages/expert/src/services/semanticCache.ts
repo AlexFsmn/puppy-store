@@ -1,7 +1,7 @@
 import {createHash} from 'crypto';
 import {prisma, loggers} from '@puppy-store/shared';
 import {embedText} from '../llm';
-import type {AgentType} from './agentGraph';
+import type {AgentType} from './agents';
 
 interface CacheEntry {
   id: string;

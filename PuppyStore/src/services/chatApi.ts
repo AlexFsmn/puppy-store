@@ -8,7 +8,7 @@ import {
   TrackingResponse,
 } from '../types/api/chat';
 import {config} from '../config';
-import {createApiClient, ApiError} from './client';
+import {createApiClient, type ApiClient, ApiError} from './client';
 
 export type {
   AgentType,
@@ -20,10 +20,14 @@ export type {
   TrackingResponse,
 };
 
-const client = createApiClient(config.api.expert);
+let client: ApiClient = createApiClient(config.api.expert);
 
-export function startChatSession(accessToken?: string | null) {
-  return client.post<ChatSessionResponse>('/chat/session', undefined, {accessToken});
+export function initializeAuthClient(tokenProvider: () => Promise<string | null>) {
+  client = createApiClient(config.api.expert, {tokenProvider});
+}
+
+export function startChatSession() {
+  return client.post<ChatSessionResponse>('/chat/session', undefined);
 }
 
 export function sendChatMessage(sessionId: string, message: string) {

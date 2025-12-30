@@ -1,19 +1,23 @@
 import {NotificationCounts} from '../types/api/notifications';
 import {config} from '../config';
-import {createApiClient} from './client';
+import {createApiClient, type ApiClient} from './client';
 
 export type {NotificationCounts};
 
-const client = createApiClient(config.api.puppies);
+let client: ApiClient = createApiClient(config.api.puppies);
 
-export function fetchNotificationCounts(accessToken: string) {
-  return client.get<NotificationCounts>('/notifications/counts', {accessToken});
+export function initializeAuthClient(tokenProvider: () => Promise<string | null>) {
+  client = createApiClient(config.api.puppies, {tokenProvider});
 }
 
-export function markApplicationsRead(accessToken: string) {
-  return client.post<void>('/notifications/mark-applications-read', undefined, {accessToken});
+export function fetchNotificationCounts() {
+  return client.get<NotificationCounts>('/notifications/counts');
 }
 
-export function markChatRead(chatRoomId: string, accessToken: string) {
-  return client.post<void>(`/notifications/mark-chat-read/${chatRoomId}`, undefined, {accessToken});
+export function markApplicationsRead() {
+  return client.post<void>('/notifications/mark-applications-read', undefined);
+}
+
+export function markChatRead(chatRoomId: string) {
+  return client.post<void>(`/notifications/mark-chat-read/${chatRoomId}`, undefined);
 }

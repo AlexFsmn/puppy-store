@@ -1,5 +1,5 @@
 import {createLLM} from '../llm';
-import type {ExtractedPreferences} from './adoptionAgent';
+import type {ExtractedPreferences} from './preferences';
 import type {ScoredPuppy} from './scoringService';
 import type {RecommendationResponse, PuppySummary} from '@puppy-store/shared';
 import {loggers} from '@puppy-store/shared';

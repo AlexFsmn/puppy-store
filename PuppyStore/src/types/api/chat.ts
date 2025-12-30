@@ -41,11 +41,6 @@ export interface ChatSessionState {
   conversationHistory: Array<{role: 'user' | 'assistant'; content: string}>;
 }
 
-export interface ExpertResponse {
-  answer: string;
-  sources?: string[];
-}
-
 export interface GeneratedDescription {
   description: string;
   generatedAt: string;

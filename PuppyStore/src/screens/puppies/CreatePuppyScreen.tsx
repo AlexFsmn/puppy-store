@@ -9,8 +9,8 @@ import {
   Platform,
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {useAuth} from '../../contexts/AuthContext';
-import {createPuppy, CreatePuppyRequest} from '../../services/puppiesApi';
+import {useCreatePuppy} from '../../hooks/usePuppies';
+import type {CreatePuppyRequest} from '../../services/puppiesApi';
 import {colors, spacing, layout, fontSize, fontWeight} from '../../theme';
 import {RootStackParamList} from '../../navigation/RootNavigator';
 import {
@@ -27,8 +27,7 @@ type CreatePuppyScreenProps = {
 type VaccinationStatus = 'UNKNOWN' | 'PARTIAL' | 'COMPLETE';
 
 export function CreatePuppyScreen({navigation}: CreatePuppyScreenProps) {
-  const {getAccessToken} = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const {mutate: createPuppy, isPending} = useCreatePuppy();
   const [error, setError] = useState<string | null>(null);
 
   // Form state
@@ -51,46 +50,40 @@ export function CreatePuppyScreen({navigation}: CreatePuppyScreenProps) {
   const [goodWithPets, setGoodWithPets] = useState(true);
   const [temperament, setTemperament] = useState('');
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!name.trim() || !description.trim() || !breed.trim() || !location.trim()) {
       setError('Please fill in all required fields');
       return;
     }
 
-    setIsLoading(true);
     setError(null);
 
-    try {
-      const token = await getAccessToken();
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
+    const data: CreatePuppyRequest = {
+      name: name.trim(),
+      description: description.trim(),
+      breed: breed.trim(),
+      location: location.trim(),
+      age: age ? parseInt(age, 10) : undefined,
+      gender: gender || undefined,
+      weight: weight ? parseFloat(weight) : undefined,
+      adoptionFee: adoptionFee ? parseInt(adoptionFee, 10) * 100 : undefined,
+      requirements: requirements.trim() || undefined,
+      healthRecords: healthRecords.trim() || undefined,
+      vaccinationStatus,
+      energyLevel,
+      goodWithKids,
+      goodWithPets,
+      temperament: temperament.trim() || undefined,
+    };
 
-      const data: CreatePuppyRequest = {
-        name: name.trim(),
-        description: description.trim(),
-        breed: breed.trim(),
-        location: location.trim(),
-        age: age ? parseInt(age, 10) : undefined,
-        gender: gender || undefined,
-        weight: weight ? parseFloat(weight) : undefined,
-        adoptionFee: adoptionFee ? parseInt(adoptionFee, 10) * 100 : undefined,
-        requirements: requirements.trim() || undefined,
-        healthRecords: healthRecords.trim() || undefined,
-        vaccinationStatus,
-        energyLevel,
-        goodWithKids,
-        goodWithPets,
-        temperament: temperament.trim() || undefined,
-      };
-
-      await createPuppy(data, token);
-      navigation.goBack();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create posting');
-    } finally {
-      setIsLoading(false);
-    }
+    createPuppy(data, {
+      onSuccess: () => {
+        navigation.goBack();
+      },
+      onError: (err) => {
+        setError(err instanceof Error ? err.message : 'Failed to create posting');
+      },
+    });
   };
 
   const renderOptionButtons = <T extends string>(
@@ -138,21 +131,21 @@ export function CreatePuppyScreen({navigation}: CreatePuppyScreenProps) {
             placeholder="Puppy's name"
             value={name}
             onChangeText={setName}
-            editable={!isLoading}
+            editable={!isPending}
           />
           <FormInput
             label="Breed *"
             placeholder="e.g., Golden Retriever"
             value={breed}
             onChangeText={setBreed}
-            editable={!isLoading}
+            editable={!isPending}
           />
           <FormInput
             label="Location *"
             placeholder="City, State"
             value={location}
             onChangeText={setLocation}
-            editable={!isLoading}
+            editable={!isPending}
           />
 
           <View style={styles.row}>
@@ -163,7 +156,7 @@ export function CreatePuppyScreen({navigation}: CreatePuppyScreenProps) {
                 value={age}
                 onChangeText={setAge}
                 keyboardType="number-pad"
-                editable={!isLoading}
+                editable={!isPending}
               />
             </View>
             <View style={styles.flex1}>
@@ -173,7 +166,7 @@ export function CreatePuppyScreen({navigation}: CreatePuppyScreenProps) {
                 value={weight}
                 onChangeText={setWeight}
                 keyboardType="decimal-pad"
-                editable={!isLoading}
+                editable={!isPending}
               />
             </View>
           </View>
@@ -199,14 +192,14 @@ export function CreatePuppyScreen({navigation}: CreatePuppyScreenProps) {
             onChangeText={setDescription}
             multiline
             numberOfLines={4}
-            editable={!isLoading}
+            editable={!isPending}
           />
           <FormInput
             label="Temperament"
             placeholder="e.g., Friendly, playful, calm"
             value={temperament}
             onChangeText={setTemperament}
-            editable={!isLoading}
+            editable={!isPending}
           />
 
           <View style={styles.inputGroup}>
@@ -255,7 +248,7 @@ export function CreatePuppyScreen({navigation}: CreatePuppyScreenProps) {
             onChangeText={setHealthRecords}
             multiline
             numberOfLines={3}
-            editable={!isLoading}
+            editable={!isPending}
           />
           <FormInput
             label="Adoption Fee ($)"
@@ -263,7 +256,7 @@ export function CreatePuppyScreen({navigation}: CreatePuppyScreenProps) {
             value={adoptionFee}
             onChangeText={setAdoptionFee}
             keyboardType="number-pad"
-            editable={!isLoading}
+            editable={!isPending}
           />
           <FormInput
             label="Adoption Requirements"
@@ -272,14 +265,14 @@ export function CreatePuppyScreen({navigation}: CreatePuppyScreenProps) {
             onChangeText={setRequirements}
             multiline
             numberOfLines={3}
-            editable={!isLoading}
+            editable={!isPending}
           />
         </FormSection>
 
         <PrimaryButton
           title="Create Posting"
           onPress={handleSubmit}
-          loading={isLoading}
+          loading={isPending}
         />
       </ScrollView>
     </KeyboardAvoidingView>

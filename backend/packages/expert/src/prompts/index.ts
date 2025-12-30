@@ -1,4 +1,4 @@
-export {expertQuestionPrompt, recommendationPrompt, descriptionGeneratorPrompt} from './templates';
+export {descriptionGeneratorPrompt} from './templates';
 export {
   containsBlockedContent,
   sanitizeInput,

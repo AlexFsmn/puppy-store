@@ -5,34 +5,36 @@ import {
   CreateApplicationRequest,
 } from '../types/api/applications';
 import {config} from '../config';
-import {createApiClient} from './client';
+import {createApiClient, type ApiClient} from './client';
 
 export type {Application, ApplicationsResponse, ApplicationStatus, CreateApplicationRequest};
 
-const client = createApiClient(config.api.puppies);
+let client: ApiClient = createApiClient(config.api.puppies);
 
-export function submitApplication(data: CreateApplicationRequest, accessToken: string) {
-  return client.post<Application>('/applications', data, {accessToken});
+export function initializeAuthClient(tokenProvider: () => Promise<string | null>) {
+  client = createApiClient(config.api.puppies, {tokenProvider});
 }
 
-export function fetchMyApplications(accessToken: string, cursor?: string, limit = 10) {
+export function submitApplication(data: CreateApplicationRequest) {
+  return client.post<Application>('/applications', data);
+}
+
+export function fetchMyApplications(cursor?: string, limit = 10) {
   return client.get<ApplicationsResponse>('/applications', {
-    accessToken,
     params: {cursor, limit},
   });
 }
 
-export function fetchReceivedApplications(accessToken: string, cursor?: string, limit = 10) {
+export function fetchReceivedApplications(cursor?: string, limit = 10) {
   return client.get<ApplicationsResponse>('/applications/received', {
-    accessToken,
     params: {cursor, limit},
   });
 }
 
-export function fetchApplication(id: string, accessToken: string) {
-  return client.get<Application>(`/applications/${id}`, {accessToken});
+export function fetchApplication(id: string) {
+  return client.get<Application>(`/applications/${id}`);
 }
 
-export function updateApplicationStatus(id: string, status: ApplicationStatus, accessToken: string) {
-  return client.patch<Application>(`/applications/${id}`, {status}, {accessToken});
+export function updateApplicationStatus(id: string, status: ApplicationStatus) {
+  return client.patch<Application>(`/applications/${id}`, {status});
 }

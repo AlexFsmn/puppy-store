@@ -1,6 +1,6 @@
 import {prisma} from '@puppy-store/shared';
 import type {Puppy} from '@puppy-store/shared';
-import type {ExtractedPreferences} from './adoptionAgent';
+import type {ExtractedPreferences} from './preferences';
 
 export interface ScoredPuppy {
   puppy: Puppy;

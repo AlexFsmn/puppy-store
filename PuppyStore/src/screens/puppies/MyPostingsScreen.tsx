@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useRef} from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,77 +9,22 @@ import {
   RefreshControl,
   Image,
 } from 'react-native';
-import {useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {useAuth} from '../../contexts/AuthContext';
-import {fetchMyPuppies, MyPuppy} from '../../services/puppiesApi';
+import {useMyPuppies} from '../../hooks/usePuppies';
+import type {MyPuppy} from '../../services/puppiesApi';
 import {colors, spacing, layout, fontSize, fontWeight} from '../../theme';
 import {getPuppyImageSource} from '../../utils';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {RootStackParamList} from '../../navigation/RootNavigator';
+import {ui} from '../../constants';
 
 type MyPostingsScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'MyPostings'>;
+  navigation: NativeStackNavigationProp<RootStackParamList>;
 };
 
 export function MyPostingsScreen({navigation}: MyPostingsScreenProps) {
-  const {getAccessToken} = useAuth();
-  const [puppies, setPuppies] = useState<MyPuppy[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const cursorRef = useRef<string | null>(null);
-
-  const loadPuppies = useCallback(async () => {
-    try {
-      setError(null);
-      cursorRef.current = null;
-      const token = await getAccessToken();
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-      const response = await fetchMyPuppies(token);
-      setPuppies(response.data);
-      cursorRef.current = response.nextCursor;
-      setHasMore(response.hasMore);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load puppies');
-    }
-  }, [getAccessToken]);
-
-  const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore || !cursorRef.current) return;
-
-    setIsLoadingMore(true);
-    try {
-      const token = await getAccessToken();
-      if (!token) return;
-
-      const response = await fetchMyPuppies(token, cursorRef.current);
-      setPuppies(prev => [...prev, ...response.data]);
-      cursorRef.current = response.nextCursor;
-      setHasMore(response.hasMore);
-    } catch (err) {
-      console.error('Error loading more puppies:', err);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [getAccessToken, hasMore, isLoadingMore]);
-
-  useFocusEffect(
-    useCallback(() => {
-      setIsLoading(true);
-      loadPuppies().finally(() => setIsLoading(false));
-    }, [loadPuppies]),
-  );
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await loadPuppies();
-    setIsRefreshing(false);
-  };
+  const {data, isLoading, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage} = useMyPuppies();
+  const puppies = data?.pages.flatMap(page => page.data) ?? [];
 
   const renderItem = ({item}: {item: MyPuppy}) => (
     <TouchableOpacity
@@ -129,8 +74,8 @@ export function MyPostingsScreen({navigation}: MyPostingsScreenProps) {
   if (error) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadPuppies}>
+        <Text style={styles.errorText}>{error.message}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -145,17 +90,19 @@ export function MyPostingsScreen({navigation}: MyPostingsScreenProps) {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+          <RefreshControl refreshing={isLoading} onRefresh={() => refetch()} />
         }
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={ui.list.endReachedThreshold}
         ListFooterComponent={
-          isLoadingMore ? (
-            <ActivityIndicator
-              size="small"
-              color={colors.primary}
-              style={styles.loadingMore}
-            />
+          isFetchingNextPage ? (
+            <View style={styles.loadingMore}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
           ) : null
         }
         ListEmptyComponent={
@@ -170,7 +117,7 @@ export function MyPostingsScreen({navigation}: MyPostingsScreenProps) {
       />
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => navigation.navigate('CreatePuppy' as never)}>
+        onPress={() => navigation.navigate('CreatePuppy')}>
         <Icon name="add" size={28} color={colors.white} />
       </TouchableOpacity>
     </View>

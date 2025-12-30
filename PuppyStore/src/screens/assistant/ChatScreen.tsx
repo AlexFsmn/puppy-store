@@ -15,7 +15,7 @@ import {RouteProp} from '@react-navigation/native';
 import {useChat, ChatMessage} from '../../hooks';
 import {validation} from '../../constants';
 import {formatTime} from '../../utils';
-import {useNotifications} from '../../contexts/NotificationsContext';
+import {useMarkChatRead} from '../../hooks/useNotifications';
 import {colors, spacing, fontSize, fontWeight, containerStyles, buttonStyles, emptyStateStyles} from '../../theme';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {RootStackParamList} from '../../navigation/RootNavigator';
@@ -51,7 +51,7 @@ export function ChatScreen({route}: ChatScreenProps) {
   const {applicationId} = route.params;
   const {messages, chatRoomId, isConnected, isLoading, error, sendMessage, currentUserId} =
     useChat(applicationId);
-  const {markChatRead} = useNotifications();
+  const {mutate: markChatRead} = useMarkChatRead();
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
 
