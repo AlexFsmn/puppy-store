@@ -1,7 +1,19 @@
 import {Request, Response, NextFunction} from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+// Fail fast if JWT_SECRET is not set (except in test environment)
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET environment variable is required in production');
+  }
+  if (process.env.NODE_ENV === 'test') {
+    return 'test-secret-do-not-use-in-production';
+  }
+  // Development fallback with warning
+  console.warn('WARNING: Using default JWT_SECRET. Set JWT_SECRET environment variable for security.');
+  return 'dev-secret-change-in-production';
+})();
+
 const JWT_ISSUER = process.env.JWT_ISSUER || 'puppy-store';
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';

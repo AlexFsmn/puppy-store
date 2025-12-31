@@ -7,7 +7,8 @@ import {
   type ChatSession,
 } from '../services/chatService';
 import {type ExtractedPreferences, type UserWithPreferences} from '../services/preferences';
-import {captureException, prisma, loggers} from '@puppy-store/shared';
+import {captureException, prisma} from '@puppy-store/shared';
+import {handleExpertError} from '../services/errors';
 
 const router = Router();
 
@@ -52,8 +53,7 @@ async function getUserFromToken(authHeader: string | undefined): Promise<UserWit
       savedPreferences: user.savedPreferences as ExtractedPreferences | null,
       preferencesUpdatedAt: user.preferencesUpdatedAt,
     };
-  } catch (err) {
-    loggers.http.error({err}, 'Failed to validate token');
+  } catch {
     return null;
   }
 }
@@ -75,13 +75,8 @@ router.post('/session', async (req, res) => {
       message: welcomeMessage,
       isReturningUser: session.isReturningUser,
     });
-  } catch (err) {
-    loggers.http.error({err, endpoint: '/chat/session'}, 'Failed to start chat session');
-    captureException(err instanceof Error ? err : new Error(String(err)), {
-      service: 'chat',
-      extra: {endpoint: '/chat/session'},
-    });
-    res.status(500).json({error: 'Failed to start chat session'});
+  } catch (error) {
+    handleExpertError(error, res, 'Failed to start chat session');
   }
 });
 
@@ -116,13 +111,8 @@ router.post('/session/:sessionId/message', async (req, res) => {
       recommendations: response.recommendations,
       hasRecommendations: !!response.recommendations,
     });
-  } catch (err) {
-    loggers.http.error({err, endpoint: '/chat/session/:sessionId/message'}, 'Failed to process message');
-    captureException(err instanceof Error ? err : new Error(String(err)), {
-      service: 'chat',
-      extra: {endpoint: '/chat/session/:sessionId/message'},
-    });
-    res.status(500).json({error: 'Failed to process message'});
+  } catch (error) {
+    handleExpertError(error, res, 'Failed to process message');
   }
 });
 
@@ -147,9 +137,8 @@ router.get('/session/:sessionId', async (req, res) => {
       recommendations: session.recommendations,
       conversationHistory: session.conversationHistory,
     });
-  } catch (err) {
-    loggers.http.error({err, endpoint: '/chat/session/:sessionId'}, 'Failed to get session');
-    res.status(500).json({error: 'Failed to get session'});
+  } catch (error) {
+    handleExpertError(error, res, 'Failed to get session');
   }
 });
 

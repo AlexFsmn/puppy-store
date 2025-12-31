@@ -109,10 +109,13 @@ Pushes to `main` trigger the GitHub Actions workflow which:
 |-------|------|
 | Mobile | React Native, TypeScript |
 | Backend | Node.js, Express, Prisma |
+| API Gateway | Kong (JWT auth, rate limiting, routing) |
 | AI | LangChain, LangGraph, OpenAI |
-| Database | PostgreSQL |
+| Database | PostgreSQL (with pgvector) |
+| Cache | Redis (rate limiting, sessions, pub/sub) |
 | Infra | Terraform, Helm, AKS |
 | Observability | Sentry, LangSmith, Prometheus |
+| Security | Helmet, JWT, bcrypt |
 
 ## Documentation
 

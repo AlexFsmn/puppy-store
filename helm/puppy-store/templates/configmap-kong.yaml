@@ -73,6 +73,21 @@ data:
             methods:
               - POST
             strip_path: false
+        plugins:
+          # Stricter rate limiting for auth endpoints to prevent brute force
+          - name: rate-limiting
+            config:
+              minute: 10
+              hour: 50
+              policy: redis
+              redis_host: {{ include "puppy-store.redisHost" . }}
+              redis_port: {{ include "puppy-store.redisPort" . }}
+              {{- if and .Values.redis.external .Values.redis.external.enabled .Values.redis.external.ssl }}
+              redis_ssl: true
+              redis_ssl_verify: false
+              {{- end }}
+              hide_client_headers: false
+              fault_tolerant: true
 
       # Protected auth routes
       - name: auth-protected
@@ -94,7 +109,7 @@ data:
                 - Authorization
 
       # ============ PUPPIES SERVICE ============
-      # Public routes (optional auth handled by service)
+      # All puppies routes now require authentication
       - name: puppies-public
         url: http://{{ include "puppy-store.fullname" . }}-puppies/
         routes:
@@ -111,13 +126,12 @@ data:
               - GET
             strip_path: false
         plugins:
-          # Optional JWT - doesn't reject if missing, but validates if present
+          # Require JWT authentication
           - name: jwt
             config:
               claims_to_verify:
                 - exp
               key_claim_name: iss
-              anonymous: anonymous
 
       # Protected puppies routes
       - name: puppies-protected
@@ -180,10 +194,12 @@ data:
               claims_to_verify:
                 - exp
               key_claim_name: iss
-          # Lower rate limit for LLM endpoints (expensive)
+          # Per-user rate limit for LLM endpoints (expensive operations)
           - name: rate-limiting
             config:
-              minute: 60
+              minute: 20
+              hour: 100
+              limit_by: consumer
               policy: redis
               redis_host: {{ include "puppy-store.redisHost" . }}
               redis_port: {{ include "puppy-store.redisPort" . }}

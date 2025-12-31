@@ -50,28 +50,48 @@ const paginationSchema = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().min(1).max(100).default(20),
 });
+
+// Usage: Fetch N+1 items, return N, check if hasMore
+const puppies = await prisma.puppy.findMany({
+  take: limit + 1,
+  ...(cursor && {skip: 1, cursor: {id: cursor}}),
+  orderBy: {createdAt: 'desc'},
+});
+
+const hasMore = puppies.length > limit;
+const data = hasMore ? puppies.slice(0, -1) : puppies;
+const nextCursor = hasMore ? data[data.length - 1].id : null;
+
+return {data, nextCursor, hasMore};
 ```
 
 Responses include `nextCursor` for efficient infinite scroll on mobile.
 
 ### Caching Strategy
 
-**Two-layer caching:**
+**Three-layer caching:**
 
-1. Redis: Chat sessions, user preferences, WebSocket state
-2. Semantic Cache: Cached LLM responses with vector similarity search
+1. **O(1) Cache**: In-memory LRU for exact query matches (fastest)
+2. **Redis**: Chat sessions, user preferences, WebSocket state
+3. **Semantic Cache**: pgvector for similar question matching via embeddings
 
 The semantic cache uses pgvector to find similar previous questions:
 - Semantic match: Vector similarity with configurable threshold (default 0.85)
 - LRU eviction when cache exceeds 10,000 entries (keeps frequently-asked questions warm, drops one-off queries)
 
-Embedding a question to check the cache is ~25x cheaper than calling the LLM. So even if we embed every request, cache hits save money. With a reasonable hit rate, this pays for itself quickly.
+Embedding a question to check the cache is cheaper than calling the LLM. Even if we embed every request, cache hits save money. With a reasonable hit rate, this pays for itself quickly.
+
+For more expensive models like gpt-5.2 ($14/1M output tokens), the savings are dramatic - embeddings are ~700x cheaper than output tokens. Even with cheaper variants like gpt-5-nano ($0.40/1M output), embeddings are still 20x cheaper, making semantic caching essential across all model tiers.
 
 | Operation | Cost (per 1M tokens) |
 |-----------|---------------------|
 | Embedding (text-embedding-3-small) | $0.02 |
-| LLM input (gpt-4o-mini) | $0.15 |
-| LLM output (gpt-4o-mini) | $0.60 |
+| LLM input (gpt-5-nano) | $0.05 |
+| LLM output (gpt-5-nano) | $0.40 |
+| LLM input (gpt-5-mini) | $0.25 |
+| LLM output (gpt-5-mini) | $2.00 |
+| LLM input (gpt-5.2) | $1.75 |
+| LLM output (gpt-5.2) | $14.00 |
 
 ### Error Handling
 
@@ -308,7 +328,7 @@ export function createLLM(config?: Partial<LLMConfig>): ChatOpenAI {
   }
 
   return new ChatOpenAI({
-    modelName: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    modelName: process.env.OPENAI_MODEL || 'gpt-5-nano',
     apiKey: process.env.OPENAI_API_KEY,
   });
 }

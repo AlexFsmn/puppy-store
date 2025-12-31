@@ -1,10 +1,6 @@
 import {Router} from 'express';
-import {loggers} from '@puppy-store/shared';
-import {
-  generateDescription,
-  generateAllDescriptions,
-  clearDescriptionCache,
-} from '../services/descriptionService';
+import {generateDescription} from '../services/descriptionService';
+import {handleExpertError} from '../services/errors';
 
 const router = Router();
 
@@ -30,39 +26,7 @@ router.get('/:puppyId', async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    loggers.http.error({err: error, endpoint: '/descriptions/:puppyId'}, 'Error generating description');
-    res.status(500).json({error: 'Failed to generate description'});
-  }
-});
-
-/**
- * POST /descriptions/generate-all
- * Generate descriptions for all available puppies (admin operation)
- */
-router.post('/generate-all', async (req, res) => {
-  try {
-    const count = await generateAllDescriptions();
-    res.json({
-      message: `Generated ${count} descriptions`,
-      count,
-    });
-  } catch (error) {
-    loggers.http.error({err: error, endpoint: '/descriptions/generate-all'}, 'Error generating all descriptions');
-    res.status(500).json({error: 'Failed to generate descriptions'});
-  }
-});
-
-/**
- * POST /descriptions/clear-cache
- * Clear the description cache (admin operation)
- */
-router.post('/clear-cache', async (_req, res) => {
-  try {
-    clearDescriptionCache();
-    res.json({message: 'Cache cleared'});
-  } catch (error) {
-    loggers.http.error({err: error, endpoint: '/descriptions/clear-cache'}, 'Error clearing cache');
-    res.status(500).json({error: 'Failed to clear cache'});
+    handleExpertError(error, res, 'Failed to generate description');
   }
 });
 

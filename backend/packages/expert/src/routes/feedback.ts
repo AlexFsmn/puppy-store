@@ -3,9 +3,8 @@ import {
   submitThumbsFeedback,
   trackPuppySelection,
   trackApplicationSubmission,
-  getSessionRecommendations,
 } from '../services/feedbackService';
-import {captureException, loggers} from '@puppy-store/shared';
+import {handleExpertError} from '../services/errors';
 
 const router = Router();
 
@@ -38,13 +37,8 @@ router.post('/thumbs', async (req, res) => {
     } else {
       res.status(400).json({success: false, error: result.error});
     }
-  } catch (err) {
-    loggers.http.error({err, endpoint: '/feedback/thumbs'}, 'Failed to submit thumbs feedback');
-    captureException(err instanceof Error ? err : new Error(String(err)), {
-      service: 'feedback',
-      extra: {endpoint: '/feedback/thumbs'},
-    });
-    res.status(500).json({error: 'Failed to submit feedback'});
+  } catch (error) {
+    handleExpertError(error, res, 'Failed to submit feedback');
   }
 });
 
@@ -82,13 +76,8 @@ router.post('/selection', async (req, res) => {
     } else {
       res.status(400).json({success: false, error: result.error});
     }
-  } catch (err) {
-    loggers.http.error({err, endpoint: '/feedback/selection'}, 'Failed to track puppy selection');
-    captureException(err instanceof Error ? err : new Error(String(err)), {
-      service: 'feedback',
-      extra: {endpoint: '/feedback/selection'},
-    });
-    res.status(500).json({error: 'Failed to track selection'});
+  } catch (error) {
+    handleExpertError(error, res, 'Failed to track selection');
   }
 });
 
@@ -132,34 +121,9 @@ router.post('/application', async (req, res) => {
     } else {
       res.status(400).json({success: false, error: result.error});
     }
-  } catch (err) {
-    loggers.http.error({err, endpoint: '/feedback/application'}, 'Failed to track application');
-    captureException(err instanceof Error ? err : new Error(String(err)), {
-      service: 'feedback',
-      extra: {endpoint: '/feedback/application'},
-    });
-    res.status(500).json({error: 'Failed to track application'});
+  } catch (error) {
+    handleExpertError(error, res, 'Failed to track application');
   }
-});
-
-/**
- * GET /feedback/session/:sessionId/recommendations
- * Get the list of recommended puppy IDs for a session
- * Useful for the frontend to determine if a selected puppy was recommended
- */
-router.get('/session/:sessionId/recommendations', (req, res) => {
-  const {sessionId} = req.params;
-  const recommendations = getSessionRecommendations(sessionId);
-
-  if (!recommendations) {
-    res.status(404).json({error: 'No recommendations found for this session'});
-    return;
-  }
-
-  res.json({
-    sessionId,
-    recommendedPuppyIds: recommendations,
-  });
 });
 
 export default router;

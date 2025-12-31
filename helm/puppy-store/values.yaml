@@ -185,7 +185,7 @@ expert:
     openai:
       secretName: openai-secret
       secretKey: api-key
-      model: gpt-4o-mini
+      model: gpt-5-nano
     local:
       baseUrl: http://host.docker.internal:11434/v1
       model: qwen2.5-3b-instruct

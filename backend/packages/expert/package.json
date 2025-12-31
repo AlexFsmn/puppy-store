@@ -8,14 +8,15 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@puppy-store/shared": "*",
     "@langchain/core": "^1.0.1",
     "@langchain/langgraph": "^1.0.7",
     "@langchain/openai": "^1.0.0",
-    "langchain": "^1.0.0",
-    "langsmith": "^0.2.0",
+    "@puppy-store/shared": "*",
     "cors": "^2.8.5",
     "express": "^5.0.0",
+    "helmet": "^8.1.0",
+    "langchain": "^1.0.0",
+    "langsmith": "^0.2.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {

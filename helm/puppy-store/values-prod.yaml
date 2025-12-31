@@ -148,7 +148,7 @@ expert:
     openai:
       secretName: openai-secret
       secretKey: api-key
-      model: gpt-4o-mini
+      model: gpt-5-nano
 
 # ============ INGRESS ============
 ingress:

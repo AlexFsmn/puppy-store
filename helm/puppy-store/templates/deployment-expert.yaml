@@ -40,6 +40,11 @@ spec:
               value: {{ include "puppy-store.databaseUrl" . | quote }}
             - name: NODE_ENV
               value: production
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "puppy-store.fullname" . }}-jwt-secret
+                  key: secret
             - name: AUTH_MODE
               value: {{ .Values.auth.authMode | quote }}
             - name: JWT_ISSUER
