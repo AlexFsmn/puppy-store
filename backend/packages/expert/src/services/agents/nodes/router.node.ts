@@ -1,7 +1,7 @@
 import {HumanMessage, SystemMessage} from '@langchain/core/messages';
 import {loggers} from '@puppy-store/shared';
 import {createLLM} from '../../../llm';
-import type {AgentStateType} from '../types';
+import type {AgentStateType, AgentType} from '../types';
 import {RouteToAgentTool} from '../tools';
 import {ROUTER_PROMPT} from '../prompts';
 import {searchCache, storeInCache} from '../../semanticCache';
@@ -24,7 +24,7 @@ export async function routerNode(state: AgentStateType): Promise<Partial<AgentSt
   // Check semantic cache for routing decision
   const cached = await searchCache(userMessage, 'router');
   if (cached) {
-    const agent = cached.response as any;
+    const agent = cached.response as AgentType;
     loggers.adoption.debug({agent, cacheHit: true, similarity: cached.similarity}, 'Router cache hit');
     return {currentAgent: agent};
   }

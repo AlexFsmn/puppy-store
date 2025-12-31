@@ -1,3 +1,4 @@
+import {randomUUID} from 'crypto';
 import type {RecommendationResponse} from '@puppy-store/shared';
 import {loggers, RedisSessionStore, redisTTL} from '@puppy-store/shared';
 import {processMessage, type AgentType} from './agents';
@@ -141,7 +142,7 @@ export async function processChatMessage(
  * Generate a unique session ID
  */
 function generateSessionId(): string {
-  return `chat_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  return `chat_${randomUUID()}`;
 }
 
 /**
